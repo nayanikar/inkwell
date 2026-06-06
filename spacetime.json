@@ -1,0 +1,14 @@
+{
+  "database": "inkwell",
+  "module-path": "./spacetimedb",
+  "server": "http://127.0.0.1:3001",
+  "dev": {
+    "run": "npm run dev"
+  },
+  "generate": [
+    {
+      "language": "typescript",
+      "out-dir": "./src/module_bindings"
+    }
+  ]
+}

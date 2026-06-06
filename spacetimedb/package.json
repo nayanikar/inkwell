@@ -1,0 +1,11 @@
+{
+  "name": "inkwell-module",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "spacetimedb": "^2.4.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}
