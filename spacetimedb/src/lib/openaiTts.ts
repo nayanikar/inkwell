@@ -3,12 +3,16 @@ import { TimeDuration } from 'spacetimedb';
 import { OPENAI_API_KEY } from './env.generated.js';
 import { base64Encode } from './base64.js';
 
-/** Professional neutral voice — works across noir, fantasy, comedy, etc. */
-export const NARRATION_VOICE = 'alloy';
-/** HD model for smoother, less robotic prosody (~2× cost vs tts-1). */
-export const NARRATION_MODEL = 'tts-1-hd';
-/** 1.0 avoids speed-parameter distortion reported on OpenAI TTS. */
-export const NARRATION_SPEED = 1.0;
+/** OpenAI recommends marin/cedar for highest-quality narration. */
+export const NARRATION_VOICE = 'marin';
+/**
+ * Expressive snapshot — follows `instructions` reliably for audiobook-style delivery.
+ * (The Dec 2025 snapshot trades steerability for lower word error rate.)
+ */
+export const NARRATION_MODEL = 'gpt-4o-mini-tts-2025-03-20';
+export const NARRATION_INSTRUCTIONS =
+  'Warm, natural audiobook narrator. Clear diction, conversational pacing, ' +
+  'subtle emotional range. Never robotic or announcer-like. Brief pauses between beats.';
 
 export function callOpenAITts(
   ctx: {
@@ -29,7 +33,7 @@ export function callOpenAITts(
     };
   },
   input: string,
-  opts?: { voice?: string; speed?: number }
+  opts?: { voice?: string; instructions?: string }
 ): string {
   const apiKey = OPENAI_API_KEY;
   if (!apiKey) {
@@ -51,7 +55,7 @@ export function callOpenAITts(
       model: NARRATION_MODEL,
       voice: opts?.voice ?? NARRATION_VOICE,
       input: trimmed,
-      speed: opts?.speed ?? NARRATION_SPEED,
+      instructions: opts?.instructions ?? NARRATION_INSTRUCTIONS,
       response_format: 'mp3',
     }),
     timeout: TimeDuration.fromMillis(60_000),

@@ -97,8 +97,21 @@ export function parseNarrationSegments(
   }
 }
 
+let webSpeechVoicesPrimed = false;
+
+function primeWebSpeechVoices() {
+  if (webSpeechVoicesPrimed || typeof window === 'undefined') return;
+  if (!window.speechSynthesis) return;
+  window.speechSynthesis.getVoices();
+  window.speechSynthesis.addEventListener('voiceschanged', () => {
+    window.speechSynthesis.getVoices();
+  });
+  webSpeechVoicesPrimed = true;
+}
+
 function pickNeutralVoice(): SpeechSynthesisVoice | null {
   if (typeof window === 'undefined' || !window.speechSynthesis) return null;
+  primeWebSpeechVoices();
   const voices = window.speechSynthesis.getVoices();
   const en = voices.filter(v => v.lang.startsWith('en'));
   return (

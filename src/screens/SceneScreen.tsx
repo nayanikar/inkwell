@@ -220,14 +220,22 @@ export default function SceneScreen({
     !anyGenerating &&
     !!pageImageUrl &&
     (previewGeneration != null || currentSceneRow?.status === 'done');
-  const narrationPopulated =
+  const narrationStatus =
+    previewGeneration?.narrationStatus ??
+    currentSceneRow?.narrationStatus ??
+    '';
+  const narrationBusy = narrationStatus === 'generating';
+  const hasServerNarration =
     !!previewGeneration?.narrationAudioUrl?.trim() ||
-    !!currentSceneRow?.narrationAudioUrl?.trim() ||
-    displayPanels.some(
-      p => p.status === 'done' && buildPanelNarrationText(p).length > 0
-    );
+    !!currentSceneRow?.narrationAudioUrl?.trim();
+  const hasPanelNarration = displayPanels.some(
+    p => p.status === 'done' && buildPanelNarrationText(p).length > 0
+  );
+  const narrationUsable =
+    hasServerNarration ||
+    (narrationStatus === 'error' && hasPanelNarration);
   const sceneReadyForNarration =
-    sceneReady && narrationPopulated && !isPreviewingGeneration;
+    sceneReady && narrationUsable && !narrationBusy && !isPreviewingGeneration;
   const canRestoreGeneration =
     isLiveScene &&
     !anyGenerating &&

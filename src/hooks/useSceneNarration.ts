@@ -38,7 +38,7 @@ export function useSceneNarration({
   const [muted, setMuted] = useState(() => loadNarrationMuted());
   const stopRef = useRef(false);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
-  const lastAutoPlayRef = useRef(0);
+  const lastAutoPlayRef = useRef('');
 
   const parsedSegments = parseNarrationSegments(segmentsJson);
   const trimmedAudioUrl = audioUrl?.trim() || '';
@@ -143,10 +143,19 @@ export function useSceneNarration({
 
   useEffect(() => {
     if (!canPlay || muted || autoPlayRequestId === 0) return;
-    if (lastAutoPlayRef.current === autoPlayRequestId) return;
-    lastAutoPlayRef.current = autoPlayRequestId;
+
+    const autoPlayKey = `${autoPlayRequestId}:${trimmedAudioUrl}:${segmentsJson ?? ''}`;
+    if (lastAutoPlayRef.current === autoPlayKey) return;
+    lastAutoPlayRef.current = autoPlayKey;
     play();
-  }, [autoPlayRequestId, canPlay, muted, play]);
+  }, [
+    autoPlayRequestId,
+    canPlay,
+    muted,
+    play,
+    trimmedAudioUrl,
+    segmentsJson,
+  ]);
 
   return {
     play,

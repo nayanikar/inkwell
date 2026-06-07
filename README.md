@@ -34,7 +34,7 @@ The comic page renders panel-by-panel and page-by-page as SpacetimeDB subscripti
 | **SpacetimeDB SDK** | `spacetimedb` + `spacetimedb/react` — `useTable`, `useReducer`, `useProcedure` |
 | **Scene writing** | Anthropic Claude (`generate_scene` procedure) |
 | **Imagery** | OpenAI GPT Image (`gpt-image-2`) — full page layout + panel art |
-| **Narration** | OpenAI TTS stored on scene rows; client playback with panel highlighting |
+| **Narration** | OpenAI `gpt-4o-mini-tts` (`marin` voice, audiobook-style instructions) stored on scene rows; auto-play on Scene 1 with panel highlighting |
 | **Voice nudges** | Browser Web Speech API mapped to genre-specific presets |
 | **Hosting** | SpacetimeDB Maincloud (module) + Vercel (frontend) |
 
@@ -148,7 +148,7 @@ The scheduled `panel_retry_queue` table invokes `retry_panel_image` on a timer. 
 | **Preset nudges** | Twist, mood shift, raise stakes, spotlight conflict |
 | **Generation history** | Preview and restore prior scene versions |
 | **Story fork** | Branch from a past scene or generation snapshot; switch forks in sidebar |
-| **Narration** | Server TTS with panel highlighting; Listen/Stop in scene header |
+| **Narration** | Server TTS with panel highlighting; auto-plays when Scene 1 finishes; Listen/Stop in scene header |
 | **Activity trail** | Live SpacetimeDB primitive badges as generation runs |
 | **Story library** | Resume any accessible story with branch counts and progress |
 | **Session overview** | Grid of all scenes with fork entry points |
@@ -294,7 +294,15 @@ npx vercel --prod
 
 Set the same `VITE_*` variables in the Vercel project dashboard. The live URL is your hackathon demo link.
 
-**Verify:** Open the Vercel URL → Start a new story → Scene 1 generates → nudge → Scene 2 reflects it. Watch the SpacetimeDB trail update in real time.
+**Verify:** Open [https://inkwell-opal.vercel.app](https://inkwell-opal.vercel.app) → Start a new story → Scene 1 generates with narration auto-playing → nudge → Scene 2 reflects it. Watch the SpacetimeDB trail update in real time.
+
+**Production URLs:**
+
+| Service | URL |
+|---------|-----|
+| Frontend (Vercel) | [https://inkwell-opal.vercel.app](https://inkwell-opal.vercel.app) |
+| SpacetimeDB module | [https://spacetimedb.com/inkwell-live](https://spacetimedb.com/inkwell-live) |
+| GitHub | [https://github.com/nayanikar/inkwell](https://github.com/nayanikar/inkwell) |
 
 ---
 
@@ -302,7 +310,7 @@ Set the same `VITE_*` variables in the Vercel project dashboard. The live URL is
 
 1. **Landing** — Show connection status, ink-on-paper UI, “Start a new story”.
 2. **Setup** — Pick genre (e.g. horror), 4 scenes, setting, 2 characters with secrets.
-3. **Scene 1** — Watch panels and page image appear via subscriptions; expand the **SpacetimeDB trail** (Reducer / Procedure / Transaction badges).
+3. **Scene 1** — Watch panels and page image appear via subscriptions; narration auto-plays when TTS finishes; expand the **SpacetimeDB trail** (Reducer / Procedure / Transaction badges).
 4. **Direct** — Apply a preset nudge (“Introduce a twist”) → **Next scene →** → Scene 2 reflects the directive.
 5. **Co-direct** — Share invite link; open second browser tab; show directors online and realtime sync.
 6. **Voice** — Tap **Nudge**, speak a directive; show it queue or apply.
@@ -344,6 +352,16 @@ inkwell/
 | `src/lib/stdb.ts` | SpacetimeDB connection builder |
 
 SpacetimeDB modules read API keys from `env.generated.ts`, created by `scripts/inject-env.mjs` at publish time. Keys run server-side inside the module when procedures call Claude and OpenAI — never in the browser bundle.
+
+### Narration (TTS)
+
+| Setting | Value |
+|---------|--------|
+| Model | `gpt-4o-mini-tts-2025-03-20` |
+| Voice | `marin` |
+| Style | Audiobook narrator instructions (warm, natural pacing) |
+
+Narration is generated per panel beat inside `generate_scene`, stored as `narration_audio_url` and `narration_segments_json` on each scene row. The client auto-plays when server TTS finishes (including Scene 1 after setup), with Web Speech fallback if TTS fails.
 
 ---
 

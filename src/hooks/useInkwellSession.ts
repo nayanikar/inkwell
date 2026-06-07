@@ -28,6 +28,7 @@ import {
   clearSavedSession,
   type SavedSession,
 } from '../lib/savedSession';
+import { unlockNarrationAudio } from '../lib/audioUnlock';
 
 export type InkwellScreen =
   | 'landing'
@@ -114,6 +115,8 @@ export function useInkwellSession() {
   const followLiveRef = useRef(true);
   const prevLiveSceneRef = useRef<number | null>(null);
   const prevLiveSceneStatusRef = useRef<string | null>(null);
+  const prevNarrationReadyRef = useRef(false);
+  const narrationSceneKeyRef = useRef('');
   const resumeAttemptRef = useRef<string | null>(null);
   const pendingForkRef = useRef<{
     parentSessionId: bigint;
@@ -252,6 +255,8 @@ export function useInkwellSession() {
     followLiveRef.current = true;
     prevLiveSceneRef.current = null;
     prevLiveSceneStatusRef.current = null;
+    prevNarrationReadyRef.current = false;
+    narrationSceneKeyRef.current = '';
   }, [sessionId]);
 
   // Follow live scene when session advances; stay on past scene during generation if following live.
@@ -326,11 +331,52 @@ export function useInkwellSession() {
     const nextStatus = liveScene.status;
     prevLiveSceneStatusRef.current = nextStatus;
 
-    if (prevStatus === 'generating' && nextStatus === 'done') {
+    const pageReady =
+      nextStatus === 'done' && !!liveScene.pageImageUrl?.trim();
+    const becameDone =
+      (prevStatus === 'generating' && nextStatus === 'done') ||
+      (prevStatus === null && pageReady);
+
+    if (becameDone) {
       bumpAutoNarrate();
     }
   }, [
     liveScene?.status,
+    liveScene?.pageImageUrl,
+    sceneNum,
+    session?.currentScene,
+    sessionId,
+    session,
+    liveScene,
+    bumpAutoNarrate,
+  ]);
+
+  // Auto-narrate when server TTS finishes (scene may already be `done` while narration generates).
+  useEffect(() => {
+    if (sessionId == null  || !session || !liveScene) return;
+    if (!followLiveRef.current) return;
+    if (sceneNum !== session.currentScene) return;
+
+    const sceneKey = `${sessionId}-${sceneNum}`;
+    if (narrationSceneKeyRef.current !== sceneKey) {
+      narrationSceneKeyRef.current = sceneKey;
+      prevNarrationReadyRef.current = false;
+    }
+
+    const narrationStatus = liveScene.narrationStatus ?? '';
+    const hasServerAudio = !!liveScene.narrationAudioUrl?.trim();
+    const narrationReady =
+      (narrationStatus === 'done' && hasServerAudio) ||
+      narrationStatus === 'error';
+    const wasReady = prevNarrationReadyRef.current;
+    prevNarrationReadyRef.current = narrationReady;
+
+    if (narrationReady && !wasReady) {
+      bumpAutoNarrate();
+    }
+  }, [
+    liveScene?.narrationStatus,
+    liveScene?.narrationAudioUrl,
     sceneNum,
     session?.currentScene,
     sessionId,
@@ -541,6 +587,7 @@ export function useInkwellSession() {
     const row = accessibleSessions.find(s => s.sessionId === id);
     if (!row) return;
 
+    unlockNarrationAudio();
     setSessionId(id);
     followLiveRef.current = true;
     prevLiveSceneRef.current = null;
@@ -558,6 +605,7 @@ export function useInkwellSession() {
     resetGenerationClientState();
     resumeAttemptRef.current = null;
     setError(null);
+    unlockNarrationAudio();
     try {
       const newSessionId = await startStory({
         genre: data.genre,
@@ -864,6 +912,7 @@ export function useInkwellSession() {
           ? row.resumeScene
           : Math.min(row.currentScene, Math.max(row.totalScenes, 1));
 
+      unlockNarrationAudio();
       setSessionId(targetSessionId);
       followLiveRef.current = !('isComplete' in row) || !row.isComplete;
       prevLiveSceneRef.current = null;
