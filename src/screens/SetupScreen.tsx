@@ -59,19 +59,21 @@ function Section({
   number,
   title,
   hint,
+  description,
   className,
   children,
 }: {
   number: string;
   title: string;
   hint?: string;
+  description?: string;
   className?: string;
   children: ReactNode;
 }) {
   return (
     <section className={`flex flex-col ${className ?? ''}`}>
-      <div className="mb-2 flex items-baseline justify-between">
-        <div className="flex items-baseline gap-2">
+      <div className="mb-2 flex items-baseline justify-between gap-3">
+        <div className="flex min-w-0 items-baseline gap-2">
           <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-ink-muted">
             {number}
           </span>
@@ -80,13 +82,45 @@ function Section({
           </h2>
         </div>
         {hint && (
-          <span className="font-mono text-[10px] uppercase tracking-widest text-ink-muted">
+          <span className="shrink-0 font-mono text-[10px] uppercase tracking-widest text-ink-muted">
             {hint}
           </span>
         )}
       </div>
+      {description && (
+        <p className="mb-2 text-sm leading-snug text-ink-muted">{description}</p>
+      )}
       {children}
     </section>
+  );
+}
+
+function OptionalField({
+  label,
+  value,
+  onChange,
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+}) {
+  return (
+    <label className="mt-2 block">
+      <span className="mb-1 block font-mono text-[10px] uppercase tracking-widest text-ink-muted/80">
+        {label}{' '}
+        <span className="normal-case tracking-normal text-ink-muted/60">
+          optional
+        </span>
+      </span>
+      <input
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="w-full border border-ink/40 bg-paper px-3 py-1.5 font-body text-base italic text-ink placeholder:text-ink-muted/70 focus:border-ink focus:outline-none"
+      />
+    </label>
   );
 }
 
@@ -132,12 +166,34 @@ export default function SetupScreen({
     genre != null &&
     setting.trim().length > 0 &&
     characters.length >= 2 &&
-    characters.every(c => c.name.trim() && c.archetype.trim() && c.personality.trim());
+    characters.every(c => c.name.trim() && c.archetype.trim());
+
+  const submitHint = (() => {
+    if (genre == null) return 'Pick a genre to start';
+    if (!setting.trim()) return 'Add where the story takes place';
+    const missingCharacter = characters.find(
+      c => !c.name.trim() || !c.archetype.trim()
+    );
+    if (missingCharacter) return 'Each character needs a name and role';
+    return 'Ready to begin';
+  })();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!canSubmit || genre == null) return;
-    onStart?.({ genre, setting: setting.trim(), totalScenes, characters });
+    onStart?.({
+      genre,
+      setting: setting.trim(),
+      totalScenes,
+      characters: characters.map(c => ({
+        ...c,
+        name: c.name.trim(),
+        archetype: c.archetype.trim(),
+        personality: c.personality.trim(),
+        visual_description: c.visual_description.trim(),
+        secret: c.secret.trim(),
+      })),
+    });
   };
 
   return (
@@ -155,9 +211,7 @@ export default function SetupScreen({
           'Step 1 · Direct'
         )
       }
-      footerLeft={
-        canSubmit ? 'Ready' : 'Pick genre, setting, and 2 characters'
-      }
+      footerLeft={submitHint}
       footerRight={
         <div className="flex shrink-0 items-center gap-3">
           <button
@@ -176,7 +230,7 @@ export default function SetupScreen({
         onSubmit={handleSubmit}
         className="mx-auto flex h-full w-full max-w-6xl flex-1 flex-col overflow-hidden px-8 pt-5"
       >
-        <div className="flex shrink-0 items-baseline justify-between">
+        <div className="flex shrink-0 items-baseline justify-between gap-6">
           <div>
             <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-ink-muted">
               Story setup
@@ -185,14 +239,20 @@ export default function SetupScreen({
               Direct your story.
             </h1>
           </div>
-          <p className="text-sm italic text-ink-muted">
-            Four short choices. Inkwell drafts the rest in panels.
+          <p className="max-w-sm text-sm leading-snug text-ink-muted">
+            Choose genre, length, and setting. Give each character a name and
+            role — Inkwell invents the rest.
           </p>
         </div>
 
         <div className="mt-4 grid min-h-0 flex-1 grid-cols-2 gap-10 overflow-hidden">
           <div className="flex min-h-0 flex-col gap-4 overflow-hidden">
-            <Section number="01" title="Genre" hint="Pick one.">
+            <Section
+              number="01"
+              title="Genre"
+              hint="Required"
+              description="Sets the tone, color palette, and story rules."
+            >
               <div className="grid grid-cols-4 gap-2">
                 {GENRES.map(g => {
                   const active = genre === g;
@@ -215,7 +275,12 @@ export default function SetupScreen({
               </div>
             </Section>
 
-            <Section number="02" title="Scene count" hint="How many scenes.">
+            <Section
+              number="02"
+              title="Scene count"
+              hint="Required"
+              description="How many comic acts Inkwell will draw for this story."
+            >
               <div className="flex flex-wrap gap-2">
                 {SCENE_COUNTS.map(n => {
                   const active = totalScenes === n;
@@ -240,13 +305,20 @@ export default function SetupScreen({
           </div>
 
           <div className="flex min-h-0 flex-col gap-4 overflow-hidden">
-            <Section number="03" title="Setting" hint="Where and when." className="shrink-0">
+            <Section
+              number="03"
+              title="Setting"
+              hint="Required"
+              description="Where and when the story happens. One short phrase is enough."
+              className="shrink-0"
+            >
               <div className="rounded-md border-2 border-ink bg-paper-surface p-2">
                 <input
                   value={setting}
                   onChange={e => setSetting(e.target.value)}
-                  placeholder="e.g. Rain-soaked 1950s Los Angeles"
+                  placeholder="e.g. Rainy night in 1950s Los Angeles"
                   required
+                  aria-label="Story setting"
                   className="w-full border border-ink/40 bg-paper px-3 py-2 font-body text-lg italic text-ink placeholder:text-ink-muted/70 focus:border-ink focus:outline-none"
                 />
               </div>
@@ -255,7 +327,8 @@ export default function SetupScreen({
             <Section
               number="04"
               title="Characters"
-              hint={`2 to 4. (${characters.length}/4)`}
+              hint={`${characters.length} of 4`}
+              description="Name and role are required. Personality, look, and secrets are optional — the AI can fill those in."
               className="flex min-h-0 flex-1 flex-col overflow-hidden"
             >
               <div className="inkwell-scroll min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain pr-1 pb-2">
@@ -274,42 +347,52 @@ export default function SetupScreen({
                         ✕
                       </button>
                     )}
-                    <div className="flex gap-2">
-                      <input
-                        value={c.name}
-                        onChange={e => updateCharacter(i, 'name', e.target.value)}
-                        placeholder="Name"
-                        required
-                        className="flex-1 border border-ink/40 bg-paper px-3 py-1.5 font-body text-base text-ink placeholder:text-ink-muted/70 focus:outline-none"
-                      />
-                      <input
-                        value={c.archetype}
-                        onChange={e => updateCharacter(i, 'archetype', e.target.value)}
-                        placeholder="Role"
-                        required
-                        className="flex-1 border border-ink/40 bg-paper px-3 py-1.5 font-body text-base italic text-ink placeholder:text-ink-muted/70 focus:outline-none"
-                      />
+                    <div className="mb-1 font-mono text-[10px] uppercase tracking-widest text-ink-muted/80">
+                      Character {i + 1}
                     </div>
-                    <input
+                    <div className="flex gap-2">
+                      <label className="flex-1">
+                        <span className="sr-only">Name for character {i + 1}</span>
+                        <input
+                          value={c.name}
+                          onChange={e => updateCharacter(i, 'name', e.target.value)}
+                          placeholder="Name — e.g. Mara"
+                          required
+                          className="w-full border border-ink/40 bg-paper px-3 py-1.5 font-body text-base text-ink placeholder:text-ink-muted/70 focus:border-ink focus:outline-none"
+                        />
+                      </label>
+                      <label className="flex-1">
+                        <span className="sr-only">Role for character {i + 1}</span>
+                        <input
+                          value={c.archetype}
+                          onChange={e =>
+                            updateCharacter(i, 'archetype', e.target.value)
+                          }
+                          placeholder="Role — e.g. Detective"
+                          required
+                          className="w-full border border-ink/40 bg-paper px-3 py-1.5 font-body text-base italic text-ink placeholder:text-ink-muted/70 focus:border-ink focus:outline-none"
+                        />
+                      </label>
+                    </div>
+                    <OptionalField
+                      label="Personality"
                       value={c.personality}
-                      onChange={e => updateCharacter(i, 'personality', e.target.value)}
-                      placeholder="Who they are"
-                      required
-                      className="mt-2 w-full border border-ink/40 bg-paper px-3 py-1.5 font-body text-base italic text-ink placeholder:text-ink-muted/70 focus:outline-none"
+                      onChange={value => updateCharacter(i, 'personality', value)}
+                      placeholder="e.g. anxious but stubborn"
                     />
-                    <input
+                    <OptionalField
+                      label="Look"
                       value={c.visual_description}
-                      onChange={e =>
-                        updateCharacter(i, 'visual_description', e.target.value)
+                      onChange={value =>
+                        updateCharacter(i, 'visual_description', value)
                       }
-                      placeholder="Species + silhouette — e.g. small white goat kid, tiny horns, nightgown"
-                      className="mt-2 w-full border border-ink/40 bg-paper px-3 py-1.5 font-body text-base italic text-ink placeholder:text-ink-muted/70 focus:outline-none"
+                      placeholder="e.g. tall woman in a red coat"
                     />
-                    <input
+                    <OptionalField
+                      label="Secret"
                       value={c.secret}
-                      onChange={e => updateCharacter(i, 'secret', e.target.value)}
-                      placeholder="A hook or secret"
-                      className="mt-2 w-full border border-ink/40 bg-paper px-3 py-1.5 font-body text-base italic text-ink placeholder:text-ink-muted/70 focus:outline-none"
+                      onChange={value => updateCharacter(i, 'secret', value)}
+                      placeholder="e.g. hiding a stolen ring"
                     />
                   </div>
                 ))}

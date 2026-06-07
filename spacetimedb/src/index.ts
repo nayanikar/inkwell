@@ -336,6 +336,24 @@ function timestampMicros(ctx: { timestamp: { microsSinceUnixEpoch: bigint } }): 
   return ctx.timestamp.microsSinceUnixEpoch;
 }
 
+function validateCharacterInput(
+  characters: { name: string; archetype: string }[]
+): void {
+  if (characters.length < 2 || characters.length > 4) {
+    throw new SenderError('Sessions require 2–4 characters');
+  }
+  for (let i = 0; i < characters.length; i++) {
+    const name = characters[i]!.name.trim();
+    const archetype = characters[i]!.archetype.trim();
+    if (!name) {
+      throw new SenderError(`Character ${i + 1} needs a name`);
+    }
+    if (!archetype) {
+      throw new SenderError(`Character ${i + 1} needs a role`);
+    }
+  }
+}
+
 function insertSessionWithCharacters(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ctx: any,
@@ -391,16 +409,16 @@ function insertSessionWithCharacters(
     const charRow = tx.db.character.insert({
       char_id: 0n,
       session_id: sessionRow.session_id,
-      name: c.name,
-      archetype: c.archetype,
-      personality: c.personality,
-      current_mood: c.current_mood || 'neutral',
-      visual_description: c.visual_description ?? '',
+      name: c.name.trim(),
+      archetype: c.archetype.trim(),
+      personality: c.personality.trim(),
+      current_mood: c.current_mood?.trim() || 'neutral',
+      visual_description: c.visual_description?.trim() ?? '',
     });
     tx.db.characterSecret.insert({
       char_id: charRow.char_id,
       session_id: sessionRow.session_id,
-      secret: c.secret,
+      secret: c.secret?.trim() ?? '',
     });
   }
 
@@ -415,13 +433,14 @@ export const create_session = spacetimedb.reducer(
     characters: t.array(CharacterInput),
   },
   (ctx, { genre, setting, totalScenes, characters }) => {
-    if (characters.length < 2 || characters.length > 4) {
-      throw new SenderError('Sessions require 2–4 characters');
+    validateCharacterInput(characters);
+    if (!setting.trim()) {
+      throw new SenderError('Setting is required');
     }
 
     const inserted = insertSessionWithCharacters(ctx, ctx, {
       genre,
-      setting,
+      setting: setting.trim(),
       totalScenes,
       characters,
     });
@@ -863,14 +882,15 @@ export const start_story = spacetimedb.procedure(
   },
   t.u64(),
   (ctx, { genre, setting, totalScenes, characters }) => {
-    if (characters.length < 2 || characters.length > 4) {
-      throw new SenderError('Sessions require 2–4 characters');
+    validateCharacterInput(characters);
+    if (!setting.trim()) {
+      throw new SenderError('Setting is required');
     }
 
     const sessionId = ctx.withTx(tx => {
       const inserted = insertSessionWithCharacters(ctx, tx, {
         genre,
-        setting,
+        setting: setting.trim(),
         totalScenes,
         characters,
       });

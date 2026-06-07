@@ -15,7 +15,7 @@ Inkwell is an AI-native collaborative comic engine built natively on [SpacetimeD
 
 Inkwell turns collaborative storytelling into a live comic production:
 
-1. **Setup** — Pick a genre, scene count, setting, and 2–4 characters with archetypes, personalities, moods, and secrets.
+1. **Setup** — Pick a genre, scene count, setting, and 2–4 characters (name + role required; personality, look, and secrets optional — AI fills in the rest).
 2. **Generate** — The SpacetimeDB module calls **Anthropic Claude** for scene scripts and **OpenAI** for page and panel artwork, plus server-side TTS narration.
 3. **Direct** — Preset nudges, custom text, or voice commands shape the next scene. Multiple directors share the same session in real time.
 4. **Fork** — Branch the story from any completed past scene (or a specific generation snapshot) into a new timeline without losing the original.

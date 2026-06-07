@@ -127,7 +127,7 @@ export function buildCharacterVoiceCards(characters: CharacterForVoice[]): strin
     .map(
       c => `
 CHARACTER VOICE — ${c.name} (${c.archetype}):
-  Personality: ${c.personality}
+  Personality: ${c.personality.trim() || 'Infer from their role and the scene.'}
   Current mood: ${c.current_mood}
   char_id: ${c.char_id}
   Speech pattern: ${getArchetypeSpeechPattern(c.archetype)}
