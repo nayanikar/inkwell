@@ -85,10 +85,10 @@ export function useInkwellSession() {
   const resumeGeneration = useProcedure(procedures.resumeGeneration);
   const retryPageNow = useProcedure(procedures.retryPageNow);
   const regenerateSceneNarration = useProcedure(procedures.regenerateSceneNarration);
+  const forkStoryBranch = useProcedure(procedures.forkStoryBranch);
   const joinSession = useReducer(reducers.joinSession);
   const submitNudge = useReducer(reducers.submitNudge);
   const restoreGenerationReducer = useReducer(reducers.restoreGeneration);
-  const forkStoryAtSceneReducer = useReducer(reducers.forkStoryAtScene);
 
   const [screen, setScreen] = useState<InkwellScreen>('landing');
   const [sessionId, setSessionId] = useState<bigint | null>(null);
@@ -763,82 +763,86 @@ export function useInkwellSession() {
     setForkConfirm(null);
   }, []);
 
-  const confirmFork = useCallback(async () => {
-    if (sessionId == null  || forkConfirm == null) return;
-    try {
-      setError(null);
-      setForkWaitingForBranch(true);
-      unlockNarrationAudio();
-      pendingForkRef.current = {
-        parentSessionId: sessionId,
-        sceneNum: forkConfirm.sceneNum,
-        generationId: forkConfirm.generationId ?? 0n,
-        requestedAtMs: Date.now(),
-      };
-      await forkStoryAtSceneReducer({
-        sessionId,
-        sceneNum: forkConfirm.sceneNum,
-        generationId: forkConfirm.generationId ?? 0n,
-        branchLabel: forkConfirm.branchLabel ?? '',
+  const completeForkNavigation = useCallback(
+    (newSessionId: bigint, forkSceneNum: number) => {
+      pendingForkRef.current = null;
+      setProcedurePending(false);
+      setOptimisticGeneratingScene(null);
+      setNudgeOutcome('idle');
+      setNudgeStatusMessage(null);
+      setForkWaitingForBranch(false);
+      resumeAttemptRef.current = null;
+      prevLiveSceneStatusRef.current = null;
+      prevNarrationReadyRef.current = false;
+      narrationSceneKeyRef.current = '';
+      setSessionId(newSessionId);
+      followLiveRef.current = true;
+      prevLiveSceneRef.current = null;
+      setSceneNum(forkSceneNum);
+      setScreen('scene');
+      setForkSettling(true);
+
+      void regenerateSceneNarration({
+        sessionId: newSessionId,
+        sceneNum: forkSceneNum,
+      }).catch(err => {
+        console.error('Fork narration regen failed:', err);
       });
-      setForkConfirm(null);
+    },
+    [regenerateSceneNarration]
+  );
+
+  const confirmFork = useCallback(async () => {
+    if (sessionId == null || forkConfirm == null) return;
+
+    const { sceneNum: forkSceneNum, generationId, branchLabel } = forkConfirm;
+    setForkConfirm(null);
+    setError(null);
+    setForkWaitingForBranch(true);
+    unlockNarrationAudio();
+    pendingForkRef.current = {
+      parentSessionId: sessionId,
+      sceneNum: forkSceneNum,
+      generationId: generationId ?? 0n,
+      requestedAtMs: Date.now(),
+    };
+
+    try {
+      const newSessionId = await forkStoryBranch({
+        sessionId,
+        sceneNum: forkSceneNum,
+        generationId: generationId ?? 0n,
+        branchLabel: branchLabel ?? '',
+      });
+      completeForkNavigation(newSessionId, forkSceneNum);
     } catch (err) {
       pendingForkRef.current = null;
       setForkWaitingForBranch(false);
       setError(friendlyProcedureError(err, 'Fork failed'));
     }
-  }, [
-    sessionId,
-    forkConfirm,
-    forkStoryAtSceneReducer,
-  ]);
+  }, [sessionId, forkConfirm, forkStoryBranch, completeForkNavigation]);
 
   useEffect(() => {
     const pending = pendingForkRef.current;
-    if (!pending ) return;
+    if (!pending) return;
 
     const newBranch = storyBranches
       .filter(b => {
         if (b.parentSessionId !== pending.parentSessionId) return false;
         if (b.forkSceneNum !== pending.sceneNum) return false;
         const forkedMs = Number((b.forkedAt || b.createdAt) / 1000n);
-        if (forkedMs < pending.requestedAtMs - 5000) return false;
+        if (forkedMs < pending.requestedAtMs - 60_000) return false;
         if (pending.generationId === 0n) {
           return b.forkGenerationId === 0n;
         }
-        // Server stores the new fork-origin generation id, not the source id.
         return b.forkGenerationId !== 0n;
       })
       .sort((a, b) => Number(b.createdAt - a.createdAt))[0];
 
     if (!newBranch) return;
 
-    const forkSceneNum = pending.sceneNum;
-    const newSessionId = newBranch.sessionId;
-    pendingForkRef.current = null;
-    setProcedurePending(false);
-    setOptimisticGeneratingScene(null);
-    setNudgeOutcome('idle');
-    setNudgeStatusMessage(null);
-    setForkWaitingForBranch(false);
-    resumeAttemptRef.current = null;
-    prevLiveSceneStatusRef.current = null;
-    prevNarrationReadyRef.current = false;
-    narrationSceneKeyRef.current = '';
-    setSessionId(newSessionId);
-    followLiveRef.current = true;
-    prevLiveSceneRef.current = null;
-    setSceneNum(forkSceneNum);
-    setScreen('scene');
-    setForkSettling(true);
-
-    void regenerateSceneNarration({
-      sessionId: newSessionId,
-      sceneNum: forkSceneNum,
-    }).catch(err => {
-      console.error('Fork narration regen failed:', err);
-    });
-  }, [storyBranches, resetGenerationClientState, regenerateSceneNarration]);
+    completeForkNavigation(newBranch.sessionId, pending.sceneNum);
+  }, [storyBranches, completeForkNavigation]);
 
   useEffect(() => {
     if (!forkWaitingForBranch || pendingForkRef.current == null) return;
@@ -847,10 +851,11 @@ export function useInkwellSession() {
       if (pendingForkRef.current == null) return;
       pendingForkRef.current = null;
       setForkWaitingForBranch(false);
+      setForkConfirm(null);
       setError(
-        'Fork created but new timeline did not appear — try refreshing'
+        'Fork is taking longer than expected — check Your stories or refresh'
       );
-    }, 15_000);
+    }, 45_000);
 
     return () => window.clearTimeout(timer);
   }, [forkWaitingForBranch]);

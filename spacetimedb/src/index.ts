@@ -761,6 +761,35 @@ export const fork_story_at_scene = spacetimedb.reducer(
   }
 );
 
+/** Fork a timeline and return the new session id (preferred client entry point). */
+export const fork_story_branch = spacetimedb.procedure(
+  {
+    sessionId: t.u64(),
+    sceneNum: t.u32(),
+    generationId: t.u64(),
+    branchLabel: t.string(),
+  },
+  t.u64(),
+  (ctx, { sessionId, sceneNum, generationId, branchLabel }) => {
+    return ctx.withTx(tx => {
+      assertSessionDirector(
+        tx.db.session.session_id.find(sessionId) ?? null,
+        ctx.sender,
+        tx.db
+      );
+      return forkStoryAtScene(
+        tx,
+        ctx,
+        sessionId,
+        sceneNum,
+        generationId,
+        branchLabel,
+        directorDisplayName(tx, ctx.sender)
+      );
+    });
+  }
+);
+
 export const restore_generation = spacetimedb.reducer(
   { sessionId: t.u64(), generationId: t.u64() },
   (ctx, { sessionId, generationId }) => {

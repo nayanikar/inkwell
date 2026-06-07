@@ -124,6 +124,7 @@ The scheduled `panel_retry_queue` table invokes `retry_panel_image` on a timer. 
 | `advance_and_generate` | Advance scene, apply nudges, generate next scene |
 | `generate_scene` | Generate or regenerate a specific scene |
 | `resume_generation` | Recover in-flight generation after reconnect |
+| `fork_story_branch` | Fork a timeline; returns new session id for immediate navigation |
 | `regenerate_scene_narration` | Regenerate TTS for a completed scene (used after fork) |
 | `retry_page_now` | Manual page image retry |
 | `retry_panel_image` | Scheduler-invoked panel retry handler |
@@ -366,7 +367,7 @@ Narration is generated per panel beat inside `generate_scene`, stored as `narrat
 
 Scene header controls: **Mute/Unmute** (persists in local storage) and **Listen/Stop** (disabled while TTS is generating). Run unit tests with `npm test`.
 
-**Fork behavior:** Fork copies comic visuals but clears copied narration audio, then calls `regenerate_scene_narration` so the new timeline uses the current TTS model/voice. Auto-play waits until the fork scene’s page and panels are visible. The “Creating fork timeline…” overlay only appears during an actual fork — not during voice nudge or next-scene advance.
+**Fork behavior:** Fork runs via `fork_story_branch`, which returns the new session id so the client navigates immediately instead of waiting on a `story_branches` subscription match. Fork copies comic visuals but clears copied narration audio, then calls `regenerate_scene_narration` so the new timeline uses the current TTS model/voice. Auto-play waits until the fork scene’s page and panels are visible. The “Creating fork timeline…” overlay only appears during an actual fork — not during voice nudge or next-scene advance.
 
 ---
 

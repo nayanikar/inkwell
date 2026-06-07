@@ -51,6 +51,7 @@ import UpdateCharacterMoodReducer from "./update_character_mood_reducer";
 
 // Import all procedure arg schemas
 import * as AdvanceAndGenerateProcedure from "./advance_and_generate_procedure";
+import * as ForkStoryBranchProcedure from "./fork_story_branch_procedure";
 import * as GenerateSceneProcedure from "./generate_scene_procedure";
 import * as RegenerateSceneNarrationProcedure from "./regenerate_scene_narration_procedure";
 import * as ResumeGenerationProcedure from "./resume_generation_procedure";
@@ -307,6 +308,7 @@ const reducersSchema = __reducers(
 /** The schema information for all procedures in this module. This is defined the same way as the procedures would have been defined in the server. */
 const proceduresSchema = __procedures(
   __procedureSchema("advance_and_generate", AdvanceAndGenerateProcedure.params, AdvanceAndGenerateProcedure.returnType),
+  __procedureSchema("fork_story_branch", ForkStoryBranchProcedure.params, ForkStoryBranchProcedure.returnType),
   __procedureSchema("generate_scene", GenerateSceneProcedure.params, GenerateSceneProcedure.returnType),
   __procedureSchema("regenerate_scene_narration", RegenerateSceneNarrationProcedure.params, RegenerateSceneNarrationProcedure.returnType),
   __procedureSchema("resume_generation", ResumeGenerationProcedure.params, ResumeGenerationProcedure.returnType),
