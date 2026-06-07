@@ -8,6 +8,8 @@
     "dev:all": "spacetime dev -y",
     "dev:stdb": "set -a && source spacetimedb/.env && set +a && spacetime start --listen-addr 127.0.0.1:3001 --non-interactive",
     "dev:publish": "node scripts/inject-env.mjs && spacetime publish inkwell -y --server http://127.0.0.1:3001 --module-path spacetimedb && spacetime generate --lang typescript --out-dir src/module_bindings --module-path spacetimedb",
+    "dev:publish:fresh": "node scripts/inject-env.mjs && spacetime publish inkwell -y --delete-data --server http://127.0.0.1:3001 --module-path spacetimedb && spacetime generate --lang typescript --out-dir src/module_bindings --module-path spacetimedb",
+    "publish:maincloud": "node scripts/inject-env.mjs && spacetime publish inkwell -y --server maincloud --module-path spacetimedb && spacetime generate --lang typescript --out-dir src/module_bindings --module-path spacetimedb",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "test": "vitest run",
@@ -15,15 +17,16 @@
     "spacetime:publish:local": "spacetime publish --module-path spacetimedb --server local"
   },
   "dependencies": {
-    "spacetimedb": "^2.4.1",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "spacetimedb": "^2.4.1"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.1.8",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
     "@vitejs/plugin-react": "^5.0.2",
+    "jsdom": "^29.1.1",
     "tailwindcss": "^4.1.8",
     "typescript": "~5.6.2",
     "vite": "^7.1.5",

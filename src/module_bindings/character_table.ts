@@ -17,5 +17,6 @@ export default __t.row({
   archetype: __t.string(),
   personality: __t.string(),
   currentMood: __t.string().name("current_mood"),
-  secret: __t.string(),
+  visualDescription: __t.string().name("visual_description"),
+  referenceImageUrl: __t.string().name("reference_image_url"),
 });

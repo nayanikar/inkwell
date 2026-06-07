@@ -38,23 +38,60 @@ import AdvanceSceneReducer from "./advance_scene_reducer";
 import AppendMemoryReducer from "./append_memory_reducer";
 import ApplyNudgeReducer from "./apply_nudge_reducer";
 import CreateSessionReducer from "./create_session_reducer";
+import ForkStoryAtSceneReducer from "./fork_story_at_scene_reducer";
+import JoinSessionReducer from "./join_session_reducer";
+import LeaveSessionReducer from "./leave_session_reducer";
+import RegenerateInviteCodeReducer from "./regenerate_invite_code_reducer";
+import RestoreGenerationReducer from "./restore_generation_reducer";
+import RetryPanelNowReducer from "./retry_panel_now_reducer";
+import RevokeCoDirectorReducer from "./revoke_co_director_reducer";
+import SetDisplayNameReducer from "./set_display_name_reducer";
+import SubmitNudgeReducer from "./submit_nudge_reducer";
 import UpdateCharacterMoodReducer from "./update_character_mood_reducer";
 
 // Import all procedure arg schemas
+import * as AdvanceAndGenerateProcedure from "./advance_and_generate_procedure";
 import * as GenerateSceneProcedure from "./generate_scene_procedure";
+import * as ResumeGenerationProcedure from "./resume_generation_procedure";
+import * as RetryPageNowProcedure from "./retry_page_now_procedure";
+import * as StartStoryProcedure from "./start_story_procedure";
 
 // Import all table schema definitions
+import AccessibleSessionsRow from "./accessible_sessions_table";
+import ActivityEventRow from "./activity_event_table";
 import CharacterRow from "./character_table";
+import CoDirectorRow from "./co_director_table";
+import DirectorPresenceRow from "./director_presence_table";
 import MemoryRow from "./memory_table";
+import MySessionsRow from "./my_sessions_table";
 import NarrativeDirectiveRow from "./narrative_directive_table";
+import NudgeEventRow from "./nudge_event_table";
 import PanelRow from "./panel_table";
+import PendingNudgeRow from "./pending_nudge_table";
 import SceneRow from "./scene_table";
+import SceneGenerationRow from "./scene_generation_table";
 import SessionRow from "./session_table";
+import StoryBranchesRow from "./story_branches_table";
+import StoryLibraryRow from "./story_library_table";
 
 /** Type-only namespace exports for generated type groups. */
 
 /** The schema information for all tables in this module. This is defined the same was as the tables would have been defined in the server. */
 const tablesSchema = __schema({
+  activityEvent: __table({
+    name: 'activity_event',
+    indexes: [
+      { accessor: 'event_id', name: 'activity_event_event_id_idx_btree', algorithm: 'btree', columns: [
+        'eventId',
+      ] },
+      { accessor: 'session_id', name: 'activity_event_session_id_idx_btree', algorithm: 'btree', columns: [
+        'sessionId',
+      ] },
+    ],
+    constraints: [
+      { name: 'activity_event_event_id_key', constraint: 'unique', columns: ['eventId'] },
+    ],
+  }, ActivityEventRow),
   character: __table({
     name: 'character',
     indexes: [
@@ -69,6 +106,34 @@ const tablesSchema = __schema({
       { name: 'character_char_id_key', constraint: 'unique', columns: ['charId'] },
     ],
   }, CharacterRow),
+  coDirector: __table({
+    name: 'co_director',
+    indexes: [
+      { accessor: 'co_director_id', name: 'co_director_co_director_id_idx_btree', algorithm: 'btree', columns: [
+        'coDirectorId',
+      ] },
+      { accessor: 'identity', name: 'co_director_identity_idx_btree', algorithm: 'btree', columns: [
+        'identity',
+      ] },
+      { accessor: 'session_id', name: 'co_director_session_id_idx_btree', algorithm: 'btree', columns: [
+        'sessionId',
+      ] },
+    ],
+    constraints: [
+      { name: 'co_director_co_director_id_key', constraint: 'unique', columns: ['coDirectorId'] },
+    ],
+  }, CoDirectorRow),
+  directorPresence: __table({
+    name: 'director_presence',
+    indexes: [
+      { accessor: 'identity', name: 'director_presence_identity_idx_btree', algorithm: 'btree', columns: [
+        'identity',
+      ] },
+    ],
+    constraints: [
+      { name: 'director_presence_identity_key', constraint: 'unique', columns: ['identity'] },
+    ],
+  }, DirectorPresenceRow),
   memory: __table({
     name: 'memory',
     indexes: [
@@ -100,6 +165,20 @@ const tablesSchema = __schema({
       { name: 'narrative_directive_directive_id_key', constraint: 'unique', columns: ['directiveId'] },
     ],
   }, NarrativeDirectiveRow),
+  nudgeEvent: __table({
+    name: 'nudge_event',
+    indexes: [
+      { accessor: 'event_id', name: 'nudge_event_event_id_idx_btree', algorithm: 'btree', columns: [
+        'eventId',
+      ] },
+      { accessor: 'session_id', name: 'nudge_event_session_id_idx_btree', algorithm: 'btree', columns: [
+        'sessionId',
+      ] },
+    ],
+    constraints: [
+      { name: 'nudge_event_event_id_key', constraint: 'unique', columns: ['eventId'] },
+    ],
+  }, NudgeEventRow),
   panel: __table({
     name: 'panel',
     indexes: [
@@ -117,6 +196,17 @@ const tablesSchema = __schema({
       { name: 'panel_panel_id_key', constraint: 'unique', columns: ['panelId'] },
     ],
   }, PanelRow),
+  pendingNudge: __table({
+    name: 'pending_nudge',
+    indexes: [
+      { accessor: 'session_id', name: 'pending_nudge_session_id_idx_btree', algorithm: 'btree', columns: [
+        'sessionId',
+      ] },
+    ],
+    constraints: [
+      { name: 'pending_nudge_session_id_key', constraint: 'unique', columns: ['sessionId'] },
+    ],
+  }, PendingNudgeRow),
   scene: __table({
     name: 'scene',
     indexes: [
@@ -131,9 +221,32 @@ const tablesSchema = __schema({
       { name: 'scene_scene_id_key', constraint: 'unique', columns: ['sceneId'] },
     ],
   }, SceneRow),
+  sceneGeneration: __table({
+    name: 'scene_generation',
+    indexes: [
+      { accessor: 'generation_id', name: 'scene_generation_generation_id_idx_btree', algorithm: 'btree', columns: [
+        'generationId',
+      ] },
+      { accessor: 'session_id', name: 'scene_generation_session_id_idx_btree', algorithm: 'btree', columns: [
+        'sessionId',
+      ] },
+    ],
+    constraints: [
+      { name: 'scene_generation_generation_id_key', constraint: 'unique', columns: ['generationId'] },
+    ],
+  }, SceneGenerationRow),
   session: __table({
     name: 'session',
     indexes: [
+      { accessor: 'owner_identity', name: 'session_owner_identity_idx_btree', algorithm: 'btree', columns: [
+        'ownerIdentity',
+      ] },
+      { accessor: 'parent_session_id', name: 'session_parent_session_id_idx_btree', algorithm: 'btree', columns: [
+        'parentSessionId',
+      ] },
+      { accessor: 'root_session_id', name: 'session_root_session_id_idx_btree', algorithm: 'btree', columns: [
+        'rootSessionId',
+      ] },
       { accessor: 'session_id', name: 'session_session_id_idx_btree', algorithm: 'btree', columns: [
         'sessionId',
       ] },
@@ -142,6 +255,34 @@ const tablesSchema = __schema({
       { name: 'session_session_id_key', constraint: 'unique', columns: ['sessionId'] },
     ],
   }, SessionRow),
+  accessible_sessions: __table({
+    name: 'accessible_sessions',
+    indexes: [
+    ],
+    constraints: [
+    ],
+  }, AccessibleSessionsRow),
+  my_sessions: __table({
+    name: 'my_sessions',
+    indexes: [
+    ],
+    constraints: [
+    ],
+  }, MySessionsRow),
+  story_branches: __table({
+    name: 'story_branches',
+    indexes: [
+    ],
+    constraints: [
+    ],
+  }, StoryBranchesRow),
+  story_library: __table({
+    name: 'story_library',
+    indexes: [
+    ],
+    constraints: [
+    ],
+  }, StoryLibraryRow),
 });
 
 /** The schema information for all reducers in this module. This is defined the same way as the reducers would have been defined in the server, except the body of the reducer is omitted in code generation. */
@@ -150,12 +291,25 @@ const reducersSchema = __reducers(
   __reducerSchema("append_memory", AppendMemoryReducer),
   __reducerSchema("apply_nudge", ApplyNudgeReducer),
   __reducerSchema("create_session", CreateSessionReducer),
+  __reducerSchema("fork_story_at_scene", ForkStoryAtSceneReducer),
+  __reducerSchema("join_session", JoinSessionReducer),
+  __reducerSchema("leave_session", LeaveSessionReducer),
+  __reducerSchema("regenerate_invite_code", RegenerateInviteCodeReducer),
+  __reducerSchema("restore_generation", RestoreGenerationReducer),
+  __reducerSchema("retry_panel_now", RetryPanelNowReducer),
+  __reducerSchema("revoke_co_director", RevokeCoDirectorReducer),
+  __reducerSchema("set_display_name", SetDisplayNameReducer),
+  __reducerSchema("submit_nudge", SubmitNudgeReducer),
   __reducerSchema("update_character_mood", UpdateCharacterMoodReducer),
 );
 
 /** The schema information for all procedures in this module. This is defined the same way as the procedures would have been defined in the server. */
 const proceduresSchema = __procedures(
+  __procedureSchema("advance_and_generate", AdvanceAndGenerateProcedure.params, AdvanceAndGenerateProcedure.returnType),
   __procedureSchema("generate_scene", GenerateSceneProcedure.params, GenerateSceneProcedure.returnType),
+  __procedureSchema("resume_generation", ResumeGenerationProcedure.params, ResumeGenerationProcedure.returnType),
+  __procedureSchema("retry_page_now", RetryPageNowProcedure.params, RetryPageNowProcedure.returnType),
+  __procedureSchema("start_story", StartStoryProcedure.params, StartStoryProcedure.returnType),
 );
 
 /** The remote SpacetimeDB module schema, both runtime and type information. */

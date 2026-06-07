@@ -1,3 +1,5 @@
+import InkwellLogo from './InkwellLogo';
+
 type InkwellHomeLinkProps = {
   onGoHome?: () => void;
   size?: 'sm' | 'lg' | 'banner';
@@ -9,25 +11,17 @@ export default function InkwellHomeLink({
   size = 'sm',
   className = '',
 }: InkwellHomeLinkProps) {
-  const sizeClass =
-    size === 'lg'
-      ? 'font-display text-5xl'
-      : size === 'banner'
-        ? 'font-label text-sm uppercase tracking-widest'
-        : 'font-display text-2xl';
-
-  if (!onGoHome) {
-    return <span className={`text-ink ${sizeClass} ${className}`}>Inkwell</span>;
-  }
+  const logoSize = size === 'lg' ? 'md' : 'xs';
 
   return (
-    <button
-      type="button"
+    <InkwellLogo
+      size={logoSize}
       onClick={onGoHome}
-      className={`text-ink transition-colors hover:text-accent ${sizeClass} ${className}`}
+      className={className}
       title="Back to home — your story is saved"
-    >
-      Inkwell
-    </button>
+      wordmarkClassName={
+        size === 'banner' ? 'font-label text-sm uppercase tracking-widest' : ''
+      }
+    />
   );
 }

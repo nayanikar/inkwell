@@ -2,11 +2,17 @@ import type { SceneJson } from './types.js';
 import {
   SUBTEXT_RULES,
   buildCharacterVoiceCards,
-  getCameraForLayoutHint,
-  getLightingForGenre,
   getSceneDramaticFunction,
   type CharacterForVoice,
 } from './storyQuality.js';
+import {
+  VISUAL_CONSISTENCY_RULES,
+  buildCharacterVisualCards,
+  buildCharacterAnchorBlock,
+  buildSceneWardrobeBlock,
+  resolveCharactersInPanel,
+  type CharacterVisualInput,
+} from './characterVisual.js';
 
 type SessionRow = {
   genre: string;
@@ -15,7 +21,7 @@ type SessionRow = {
   total_scenes: number;
 };
 
-type CharacterRow = CharacterForVoice;
+type CharacterRow = CharacterForVoice & CharacterVisualInput;
 
 type MemoryRow = {
   scene_num: number;
@@ -81,6 +87,10 @@ Setting: ${session.setting}
 
 ${buildCharacterVoiceCards(characters)}
 
+${buildCharacterVisualCards(characters)}
+
+${VISUAL_CONSISTENCY_RULES}
+
 STORY MEMORY (what has happened):
 ${
   memories.length > 0
@@ -103,14 +113,18 @@ Respond ONLY with valid JSON. No markdown. No preamble. Exactly this schema:
 {
   "title": "4-6 words, evocative, not literal",
   "scene_summary": "One sentence. What actually happened in this scene.",
+  "scene_wardrobe": [
+    { "char_id": 1, "outfit": "Only if outfit changes this scene; omit if default" }
+  ],
   "panels": [
     {
       "panel_num": 1,
       "caption": "First person narrator voice. Observational. Or empty string.",
       "speaker": "Character name or empty string",
       "dialogue": "What they say. Or empty string. Two lines max.",
-      "image_prompt": "Concrete visual description. Pose, expression, environment detail, camera angle.",
-      "layout_hint": "wide | tall | square | close-up"
+      "image_prompt": "Pose, expression, action, environment, camera angle ONLY — never redesign species or face.",
+      "layout_hint": "wide | tall | square | close-up",
+      "characters_present": ["Exact character names visible in this panel"]
     }
   ],
   "character_updates": [
@@ -131,62 +145,123 @@ export function parseSceneJson(text: string): SceneJson {
 }
 
 type PanelPromptInput = {
+  panel_num: number;
   caption?: string;
   speaker?: string;
   dialogue?: string;
   image_prompt: string;
   layout_hint?: string;
+  characters_present?: string[];
 };
 
-type PanelImagePromptInput = {
+type PageImagePromptInput = {
   session: {
     genre: string;
     setting: string;
     style_bible: string;
   };
   sceneNum: number;
-  panel: PanelPromptInput;
+  characters: CharacterVisualInput[];
+  panels: PanelPromptInput[];
+  sceneWardrobe?: { char_id: number; outfit: string }[];
+  hasReferenceImages?: boolean;
+  hasPreviousPage?: boolean;
 };
 
-export function buildPanelImagePrompt({
+const PAGE_PROMPT_FOOTER =
+  'Hand-drawn speech balloons, caption boxes, ALL CAPS lettering, black ink on white paper.';
+
+function toAllCaps(text: string): string {
+  return text.trim().toUpperCase();
+}
+
+function buildCharacterAnchorBlockForPage(
+  characters: CharacterVisualInput[],
+  sceneWardrobe?: { char_id: number; outfit: string }[]
+): string {
+  const wardrobeMap = new Map<string, string>();
+  if (sceneWardrobe?.length) {
+    const byId = new Map(
+      characters.map(c => [Number(c.char_id ?? 0n), c.name.trim()])
+    );
+    for (const w of sceneWardrobe) {
+      const name = byId.get(w.char_id);
+      if (name && w.outfit?.trim()) {
+        wardrobeMap.set(name, w.outfit.trim());
+      }
+    }
+  }
+  return buildCharacterAnchorBlock(characters, wardrobeMap);
+}
+
+function formatPanelLine(
+  panel: PanelPromptInput,
+  cast: CharacterVisualInput[]
+): string {
+  const num = panel.panel_num;
+  const prompt = panel.image_prompt?.trim() || 'Visual scene';
+  const present = resolveCharactersInPanel(panel, cast);
+  const castNote =
+    present.length > 0
+      ? ` Characters in panel: ${present.join(', ')}.`
+      : '';
+  const parts = [`Panel ${num} — [${prompt}]${castNote}`];
+
+  if (panel.caption?.trim()) {
+    parts.push(`Caption box: "${toAllCaps(panel.caption)}"`);
+  }
+  if (panel.dialogue?.trim()) {
+    const speaker = panel.speaker?.trim() || 'UNKNOWN';
+    parts.push(`Speech balloon from ${speaker.toUpperCase()}: "${toAllCaps(panel.dialogue)}"`);
+  }
+  if (!panel.caption?.trim() && !panel.dialogue?.trim()) {
+    parts.push('No dialogue.');
+  }
+
+  return parts.join('. ');
+}
+
+function buildLayoutHeader(panelCount: number): string {
+  const stripCount = Math.ceil(panelCount / 3);
+  return [
+    'LAYOUT: Black and white newspaper comic strip page.',
+    'Pen and ink illustration with cross-hatching and clear gutters between panels.',
+    `${stripCount} horizontal strip${stripCount === 1 ? '' : 's'}, up to 3 panels per strip.`,
+  ].join('\n');
+}
+
+export function buildPageImagePrompt({
   session,
   sceneNum,
-  panel,
-}: PanelImagePromptInput): string {
-  const layoutHint = panel.layout_hint ?? 'square';
-  const lighting = getLightingForGenre(session.genre);
-  const camera = getCameraForLayoutHint(layoutHint);
+  characters,
+  panels,
+  sceneWardrobe,
+  hasReferenceImages,
+  hasPreviousPage,
+}: PageImagePromptInput): string {
+  const sortedPanels = [...panels].sort((a, b) => a.panel_num - b.panel_num);
+  const refNotes: string[] = [];
+  if (hasReferenceImages) {
+    refNotes.push(
+      'REFERENCE IMAGES: First image(s) are character model sheets — match species, face, ears/horns, proportions, and default outfit exactly.'
+    );
+  }
+  if (hasPreviousPage) {
+    refNotes.push(
+      'STYLE LOCK: Final reference image is the previous comic page — match character designs and ink style; only change poses and layout for this scene.'
+    );
+  }
 
   const parts = [
     session.style_bible,
     `SCENE CONTEXT: ${session.genre} story, ${session.setting}, scene ${sceneNum}.`,
-    'This is a comic panel — it must work as a standalone image but belong to a sequence.',
-    'CONTINUITY RULES:',
-    '- Character appearances must stay consistent with their established look',
-    `- The environment is: ${session.setting}`,
-    `- Lighting should be: ${lighting}`,
-    `- Camera: ${camera}`,
-    'Single complete comic book panel. All text must appear inside the image as hand-drawn speech balloons or caption boxes with legible lettering.',
-    `THIS PANEL: ${panel.image_prompt}`,
+    buildCharacterAnchorBlockForPage(characters, sceneWardrobe),
+    buildSceneWardrobeBlock(characters, sceneWardrobe),
+    ...refNotes,
+    buildLayoutHeader(sortedPanels.length),
+    ...sortedPanels.map(p => formatPanelLine(p, characters)),
+    PAGE_PROMPT_FOOTER,
   ];
 
-  if (panel.dialogue?.trim()) {
-    parts.push(
-      `DIALOGUE IN PANEL (render as speech balloon): "${panel.dialogue.trim()}" — spoken by ${panel.speaker?.trim() || 'unknown'}`
-    );
-  } else {
-    parts.push('No dialogue in this panel.');
-  }
-
-  if (panel.caption?.trim()) {
-    parts.push(`CAPTION (render as caption box): "${panel.caption.trim()}"`);
-  } else {
-    parts.push('No caption in this panel.');
-  }
-
-  if (!panel.dialogue?.trim() && !panel.caption?.trim()) {
-    parts.push('Silent panel with no speech balloons or captions.');
-  }
-
-  return parts.join('\n');
+  return parts.filter(Boolean).join('\n');
 }

@@ -4,7 +4,79 @@ export type SceneRow = {
   sceneNum: number;
   title: string;
   sceneSummary?: string | null;
+  pageImageUrl?: string | null;
+  narrationAudioUrl?: string | null;
+  narrationSegmentsJson?: string | null;
+  narrationStatus?: string | null;
+  currentGenerationId?: bigint | null;
   status: string;
+};
+
+export type GenerationRow = {
+  generationId: bigint;
+  sessionId: bigint;
+  sceneNum: number;
+  sourceSceneId: bigint;
+  generationNum: number;
+  kind: string;
+  reason: string;
+  title: string;
+  sceneSummary: string;
+  pageImageUrl: string;
+  narrationAudioUrl: string;
+  narrationSegmentsJson: string;
+  narrationStatus: string;
+  panelsJson: string;
+  status: string;
+  isCurrent: boolean;
+  createdAt: bigint;
+  supersededAt: bigint;
+};
+
+export type GenerationPanelSnapshot = {
+  panelNum: number;
+  caption: string;
+  speaker: string;
+  dialogue: string;
+  imagePrompt: string;
+  layoutHint: string;
+};
+
+export function parseGenerationPanels(
+  panelsJson: string | null | undefined
+): GenerationPanelSnapshot[] {
+  if (!panelsJson?.trim()) return [];
+  try {
+    const parsed = JSON.parse(panelsJson) as GenerationPanelSnapshot[];
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(p => typeof p.panelNum === 'number');
+  } catch {
+    return [];
+  }
+}
+
+export function generationPanelsToDisplay(
+  snapshots: GenerationPanelSnapshot[]
+): import('../components/Panel').PanelProps[] {
+  return snapshots.map(p => ({
+    panelNum: p.panelNum,
+    caption: p.caption,
+    speaker: p.speaker,
+    dialogue: p.dialogue,
+    imagePrompt: p.imagePrompt,
+    layoutHint: p.layoutHint,
+    imageUrl: '',
+    status: 'done' as const,
+  }));
+}
+
+export const GENERATION_KIND_LABELS: Record<string, string> = {
+  initial: 'First generation',
+  page_retry: 'Page retry',
+  script_regen: 'Script regen',
+  failed_attempt: 'Failed attempt',
+  restored: 'Restored',
+  fork_origin: 'Fork origin',
 };
 
 export type StoryAct = {
@@ -12,6 +84,7 @@ export type StoryAct = {
   sceneId?: bigint;
   title: string;
   status: 'done' | 'generating' | 'upcoming' | 'pending';
+  isForkPoint?: boolean;
 };
 
 export function pickCanonicalScene(
@@ -34,7 +107,8 @@ export function buildStoryActs(
   totalScenes: number,
   currentSceneNum: number,
   isGenerating: boolean,
-  sessionCurrentScene: number
+  sessionCurrentScene: number,
+  forkPointSceneNum?: number
 ): StoryAct[] {
   const acts: StoryAct[] = [];
 
@@ -46,7 +120,9 @@ export function buildStoryActs(
       status = 'done';
     } else if (
       canonical?.status === 'generating' ||
-      (isGenerating && n === currentSceneNum)
+      (isGenerating &&
+        n === currentSceneNum &&
+        canonical?.status !== 'done')
     ) {
       status = 'generating';
     } else if (n <= sessionCurrentScene && !canonical) {
@@ -60,6 +136,10 @@ export function buildStoryActs(
       sceneId: canonical?.sceneId,
       title: canonical?.title ?? '',
       status,
+      isForkPoint:
+        forkPointSceneNum != null &&
+        forkPointSceneNum > 0 &&
+        n === forkPointSceneNum,
     });
   }
 

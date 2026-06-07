@@ -6,6 +6,8 @@ dist
 
 spacetime.local.json
 .env.local
+.env.production
 spacetimedb/.env
 spacetimedb/src/lib/env.generated.ts
 
+.vercel

@@ -1,10 +1,16 @@
 import type { ReactNode } from 'react';
+import AppHeader from './AppHeader';
+import type { DirectorOnline } from '../lib/hooks';
 
 type InkwellPageShellProps = {
   headerRight?: ReactNode;
   footerLeft?: ReactNode;
   footerRight?: ReactNode;
   onLogoClick?: () => void;
+  showConnection?: boolean;
+  directorsOnline?: DirectorOnline[];
+  sessionRole?: 'owner' | 'co-director' | null;
+  error?: string | null;
   children: ReactNode;
 };
 
@@ -13,34 +19,22 @@ export default function InkwellPageShell({
   footerLeft,
   footerRight,
   onLogoClick,
+  showConnection = false,
+  directorsOnline = [],
+  sessionRole = null,
+  error = null,
   children,
 }: InkwellPageShellProps) {
-  const logo = (
-    <span className="font-display text-lg font-medium tracking-tight text-ink">
-      Inkwell
-    </span>
-  );
-
   return (
     <div className="paper-grain flex h-full min-h-0 flex-col overflow-hidden">
-      <header className="flex shrink-0 items-center justify-between border-b border-hairline px-8 py-3">
-        {onLogoClick ? (
-          <button
-            type="button"
-            onClick={onLogoClick}
-            className="text-left transition-colors hover:text-accent"
-          >
-            {logo}
-          </button>
-        ) : (
-          logo
-        )}
-        {headerRight && (
-          <div className="min-w-0 shrink-0 font-mono text-[10px] uppercase tracking-[0.3em] text-ink-muted">
-            {headerRight}
-          </div>
-        )}
-      </header>
+      <AppHeader
+        onLogoClick={onLogoClick}
+        headerRight={headerRight}
+        showConnection={showConnection}
+        directorsOnline={directorsOnline}
+        sessionRole={sessionRole}
+        error={error}
+      />
 
       <main className="min-h-0 flex-1 overflow-hidden">{children}</main>
 
@@ -48,7 +42,7 @@ export default function InkwellPageShell({
         <footer className="shrink-0 border-t border-hairline px-8 py-3">
           <div className="mx-auto flex max-w-6xl items-center justify-between gap-4">
             {footerLeft && (
-              <div className="min-w-0 truncate font-mono text-[10px] uppercase tracking-[0.3em] text-ink-muted">
+              <div className="flex min-w-0 items-center gap-2 truncate font-mono text-[10px] uppercase tracking-[0.3em] text-ink-muted">
                 {footerLeft}
               </div>
             )}

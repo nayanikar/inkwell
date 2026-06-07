@@ -18,4 +18,9 @@ export default __t.row({
   status: __t.string(),
   createdAt: __t.u64().name("created_at"),
   sceneSummary: __t.string().name("scene_summary"),
+  pageImageUrl: __t.string().name("page_image_url"),
+  narrationAudioUrl: __t.string().name("narration_audio_url"),
+  narrationSegmentsJson: __t.string().name("narration_segments_json"),
+  narrationStatus: __t.string().name("narration_status"),
+  currentGenerationId: __t.u64().name("current_generation_id"),
 });

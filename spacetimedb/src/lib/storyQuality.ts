@@ -86,6 +86,13 @@ CAPTION RULES:
   "I knew something was wrong" is bad — show us, don't tell us.
 - Max one caption per panel. Many panels should have none.
 
+NARRATION RULES (text will be read aloud by a neutral audiobook narrator):
+- Write captions and dialogue that sound natural when spoken — contractions, plain words, breath-sized sentences
+- Avoid semicolon chains, stage directions in parentheses, or ALL CAPS in caption/dialogue fields
+- Dialogue is spoken as the line itself — never write "he said" or "she replied" in the dialogue field
+- One clear beat per caption or dialogue line; split long thoughts across panels
+- End key lines on a period or ellipsis so the narrator can land the beat
+
 VISUAL RULES:
 - Each panel should be describable in one strong image
 - If two panels have the same composition (two people talking at a desk),

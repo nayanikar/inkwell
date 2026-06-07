@@ -4,10 +4,12 @@ const STORAGE_KEY = `${DB_NAME}/saved_session`;
 
 export type SavedSession = {
   sessionId: string;
+  rootSessionId?: string;
   sceneNum: number;
   genre: string;
   setting: string;
   savedAt: number;
+  role?: 'owner' | 'co-director';
 };
 
 export function loadSavedSession(): SavedSession | null {

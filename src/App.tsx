@@ -2,7 +2,7 @@ import LandingScreen from './screens/LandingScreen';
 import SetupScreen from './screens/SetupScreen';
 import SceneScreen from './screens/SceneScreen';
 import SessionScreen from './screens/SessionScreen';
-import ConnectionBanner from './components/ConnectionBanner';
+import StoryLibraryScreen from './screens/StoryLibraryScreen';
 import { useInkwellSession } from './hooks/useInkwellSession';
 
 function App() {
@@ -12,9 +12,10 @@ function App() {
     setScreen,
     sessionId,
     sceneNum,
-    setSceneNum,
     isSubmitting,
     isGenerating,
+    isAdvancePending,
+    isJoining,
     useMockPreview,
     error,
     session,
@@ -24,15 +25,49 @@ function App() {
     panels,
     currentScene,
     savedSession,
+    shareUrl,
+    directorsOnline,
+    sessionRole,
+    nudgeActorName,
+    nudgeActorIsSelf,
+    pendingNudge,
+    nudgeOutcome,
+    nudgeStatusMessage,
+    otherDirectorsOnline,
     handleGoHome,
     handleContinueStory,
     handleStart,
     handleNudge,
+    handleSubmitNudge,
     handleNextScene,
+    handleSelectAct,
+    autoNarrateRequestId,
+    handleRetryPage,
+    handleRestoreGeneration,
+    handleSwitchBranch,
+    requestForkAtScene,
+    confirmFork,
+    cancelFork,
+    forkConfirm,
+    canForkAtScene,
+    forkPending,
+    storyBranches,
+    sessionScenes,
+    handleJoinSession,
     handlePreviewScene,
+    handleOpenStoryLibrary,
+    handleResumeStory,
+    handleBrowseStoryScenes,
+    storyLibrary,
   } = useInkwellSession();
 
-  const showConnectionBanner = screen === 'scene' || screen === 'session';
+  const isLiveScene =
+    session?.currentScene == null || sceneNum === session?.currentScene;
+  const coDirectHint =
+    !useMockPreview &&
+    otherDirectorsOnline &&
+    !isGenerating &&
+    isLiveScene;
 
   const main = (() => {
     if (screen === 'landing') {
@@ -45,6 +80,30 @@ function App() {
               savedSession ? handleContinueStory : undefined
             }
             savedSession={savedSession}
+            onJoinSession={(id, code) =>
+              void handleJoinSession(BigInt(id), code)
+            }
+            onOpenStoryLibrary={handleOpenStoryLibrary}
+            isJoining={isJoining}
+            error={error}
+          />
+        </div>
+      );
+    }
+
+    if (screen === 'story-library') {
+      return (
+        <div className="min-h-0 flex-1 overflow-hidden">
+          <StoryLibraryScreen
+            stories={storyLibrary}
+            savedSession={savedSession}
+            connected={connected}
+            onGoHome={handleGoHome}
+            onResumeStory={handleResumeStory}
+            onBrowseScenes={handleBrowseStoryScenes}
+            onSwitchBranch={handleSwitchBranch}
+            activeSessionId={sessionId}
+            error={error}
           />
         </div>
       );
@@ -60,6 +119,7 @@ function App() {
             onGoHome={handleGoHome}
             onPreviewScene={handlePreviewScene}
             isSubmitting={isSubmitting}
+            error={error}
           />
         </div>
       );
@@ -72,19 +132,25 @@ function App() {
             sessionId={sessionId}
             genre={session?.genre}
             setting={session?.setting}
-            currentSceneNum={sceneNum}
+            currentSceneNum={session?.currentScene}
             totalScenes={session?.totalScenes}
-            scenes={scenes.map(s => ({
-              sceneNum: s.sceneNum,
-              title: s.title,
-              status: s.status,
-            }))}
+            scenes={sessionScenes}
             onGoHome={handleGoHome}
             onOpenScene={num => {
-              setSceneNum(num);
+              handleSelectAct(num);
               setScreen('scene');
             }}
             onBack={() => setScreen('scene')}
+            onRequestFork={requestForkAtScene}
+            canForkAtScene={canForkAtScene}
+            forkPending={forkPending}
+            forkConfirm={forkConfirm}
+            onConfirmFork={() => void confirmFork()}
+            onCancelFork={cancelFork}
+            isGenerating={isGenerating}
+            directorsOnline={useMockPreview ? [] : directorsOnline}
+            sessionRole={useMockPreview ? null : sessionRole}
+            error={error}
           />
         </div>
       );
@@ -108,13 +174,38 @@ function App() {
               name: c.name,
               archetype: c.archetype,
             }))}
-            onSelectAct={num => setSceneNum(num)}
+            onSelectAct={handleSelectAct}
             onGoHome={handleGoHome}
+            onOpenStoryLibrary={handleOpenStoryLibrary}
             onNudge={handleNudge}
+            onSubmitNudge={handleSubmitNudge}
             onNextScene={handleNextScene}
             onOpenAllScenes={() => setScreen('session')}
             isGenerating={isGenerating}
+            isAdvancePending={isAdvancePending}
             useMockData={useMockPreview}
+            shareUrl={shareUrl}
+            onRetryPage={handleRetryPage}
+            nudgeActorName={nudgeActorName}
+            nudgeActorIsSelf={nudgeActorIsSelf}
+            pendingNudge={pendingNudge}
+            nudgeOutcome={nudgeOutcome}
+            nudgeStatusMessage={nudgeStatusMessage}
+            coDirectHint={coDirectHint}
+            autoNarrateRequestId={autoNarrateRequestId}
+            onRestoreGeneration={handleRestoreGeneration}
+            parentSessionId={session?.parentSessionId}
+            forkSceneNum={session?.forkSceneNum}
+            branchLabel={session?.branchLabel}
+            storyBranches={storyBranches}
+            onSwitchBranch={handleSwitchBranch}
+            onRequestFork={requestForkAtScene}
+            canForkAtScene={canForkAtScene}
+            forkConfirm={forkConfirm}
+            onConfirmFork={() => void confirmFork()}
+            onCancelFork={cancelFork}
+            forkPending={forkPending}
+            error={error}
           />
         </div>
       );
@@ -127,6 +218,12 @@ function App() {
           onStartNewStory={() => setScreen('setup')}
           onContinueStory={savedSession ? handleContinueStory : undefined}
           savedSession={savedSession}
+          onJoinSession={(id, code) =>
+            void handleJoinSession(BigInt(id), code)
+          }
+          onOpenStoryLibrary={handleOpenStoryLibrary}
+          isJoining={isJoining}
+          error={error}
         />
       </div>
     );
@@ -134,14 +231,6 @@ function App() {
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
-      {showConnectionBanner && (
-        <ConnectionBanner error={error} onGoHome={handleGoHome} />
-      )}
-      {error && !showConnectionBanner && (
-        <div className="shrink-0 border-b border-accent bg-accent/10 px-6 py-1.5 font-label text-[10px] text-accent">
-          {error}
-        </div>
-      )}
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">{main}</div>
     </div>
   );

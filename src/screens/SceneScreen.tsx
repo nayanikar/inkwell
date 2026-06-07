@@ -1,15 +1,38 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import ComicPage from '../components/ComicPage';
 import DirectSceneRail from '../components/DirectSceneRail';
 import StoryThread from '../components/StoryThread';
+import ShareSessionButton from '../components/ShareSessionButton';
 import type { PanelProps } from '../components/Panel';
 import type { StoryAct } from '../lib/storyActs';
-import type { NarrationCharacter } from '../lib/narration';
-import { formatStoryHeader } from '../lib/resumeLabel';
+import {
+  buildPanelNarrationText,
+  type NarrationCharacter,
+} from '../lib/narration';
+import {
+  generationPanelsToDisplay,
+  parseGenerationPanels,
+} from '../lib/storyActs';
+import AppHeader from '../components/AppHeader';
+import { getNudgePresets } from '../lib/nudgePresets';
 import { useSceneNarration } from '../hooks/useSceneNarration';
-import { useSceneDirectives, useCurrentScene } from '../lib/hooks';
+import { useVoiceNudge } from '../hooks/useVoiceNudge';
+import VoiceNudgeButton from '../components/VoiceNudgeButton';
+import ForkConfirmModal from '../components/ForkConfirmModal';
+import {
+  useActivityEvents,
+  useSceneDirectives,
+  useCurrentScene,
+  useCharacters,
+  useMemories,
+  useSceneGenerations,
+  useGenerationCounts,
+} from '../lib/hooks';
+import type { PendingNudgeRow, StoryBranchRow } from '../lib/hooks';
+import type { NudgeOutcome } from '../hooks/useInkwellSession';
 import {
   mockPanels,
+  mockPageImageUrl,
   mockSceneTitle,
   mockSession,
 } from '../mock/fixtures';
@@ -28,51 +51,41 @@ type SceneScreenProps = {
   characters?: NarrationCharacter[];
   onSelectAct?: (sceneNum: number) => void;
   onNudge?: (type: string, content: string) => void;
+  onSubmitNudge?: (type: string, content: string) => void;
   onNextScene?: () => void;
   onOpenAllScenes?: () => void;
+  onOpenStoryLibrary?: () => void;
   onGoHome?: () => void;
   isGenerating?: boolean;
+  isAdvancePending?: boolean;
   useMockData?: boolean;
+  shareUrl?: string | null;
+  onRetryPage?: () => void;
+  nudgeActorName?: string | null;
+  nudgeActorIsSelf?: boolean;
+  pendingNudge?: PendingNudgeRow | null;
+  nudgeOutcome?: NudgeOutcome;
+  nudgeStatusMessage?: string | null;
+  coDirectHint?: boolean;
+  autoNarrateRequestId?: number;
+  onRestoreGeneration?: (generationId: bigint) => void;
+  parentSessionId?: bigint;
+  forkSceneNum?: number;
+  branchLabel?: string;
+  storyBranches?: StoryBranchRow[];
+  onSwitchBranch?: (sessionId: bigint) => void;
+  onRequestFork?: (sceneNum: number, generationId?: bigint) => void;
+  canForkAtScene?: (sceneNum: number) => boolean;
+  forkConfirm?: {
+    sceneNum: number;
+    generationId?: bigint;
+    branchLabel?: string;
+  } | null;
+  onConfirmFork?: () => void;
+  onCancelFork?: () => void;
+  forkPending?: boolean;
+  error?: string | null;
 };
-
-function SceneProgressDots({
-  total,
-  current,
-  acts,
-  isGenerating,
-}: {
-  total: number;
-  current: number;
-  acts: StoryAct[];
-  isGenerating: boolean;
-}) {
-  return (
-    <div className="flex items-center gap-1">
-      {Array.from({ length: total }, (_, i) => {
-        const n = i + 1;
-        const act = acts.find(a => a.sceneNum === n);
-        const isDone = act?.status === 'done';
-        const isCurrent = n === current;
-        const pulsing = isCurrent && isGenerating;
-
-        return (
-          <span
-            key={n}
-            className={`inline-block h-2 w-2 border border-ink ${
-              isDone
-                ? 'bg-ink'
-                : isCurrent
-                  ? pulsing
-                    ? 'animate-pulse bg-accent'
-                    : 'bg-accent'
-                  : 'bg-paper'
-            }`}
-          />
-        );
-      })}
-    </div>
-  );
-}
 
 export default function SceneScreen({
   sessionId,
@@ -88,17 +101,93 @@ export default function SceneScreen({
   characters = [],
   onSelectAct,
   onNudge,
+  onSubmitNudge,
   onNextScene,
   onOpenAllScenes,
   onGoHome,
   isGenerating = false,
+  isAdvancePending = false,
   useMockData = false,
+  shareUrl,
+  onRetryPage,
+  nudgeActorName,
+  nudgeActorIsSelf = false,
+  pendingNudge = null,
+  nudgeOutcome = 'idle',
+  nudgeStatusMessage = null,
+  coDirectHint = false,
+  autoNarrateRequestId = 0,
+  onRestoreGeneration,
+  parentSessionId = 0n,
+  forkSceneNum = 0,
+  branchLabel = '',
+  storyBranches = [],
+  onSwitchBranch,
+  onRequestFork,
+  canForkAtScene,
+  forkConfirm = null,
+  onConfirmFork,
+  onCancelFork,
+  forkPending = false,
+  error = null,
 }: SceneScreenProps) {
-  const displayPanels = useMockData ? mockPanels : (panels ?? []);
+  const [viewingGenerationId, setViewingGenerationId] = useState<bigint | null>(
+    null
+  );
+
+  useEffect(() => {
+    setViewingGenerationId(null);
+  }, [sceneNum]);
+
+  const trailSceneNum = sceneNum;
+  const sceneDirectives = useSceneDirectives(
+    useMockData ? null : sessionId,
+    trailSceneNum
+  );
+  const currentSceneRow = useCurrentScene(
+    useMockData ? null : sessionId,
+    sceneNum
+  );
+  const generations = useSceneGenerations(
+    useMockData ? null : sessionId,
+    sceneNum
+  );
+  const generationCounts = useGenerationCounts(
+    useMockData ? null : sessionId
+  );
+  const previewGeneration = useMemo(
+    () =>
+      viewingGenerationId != null
+        ? generations.find(g => g.generationId === viewingGenerationId)
+        : undefined,
+    [generations, viewingGenerationId]
+  );
+  const activityEvents = useActivityEvents(
+    useMockData ? null : sessionId,
+    trailSceneNum,
+    viewingGenerationId ??
+      currentSceneRow?.currentGenerationId ??
+      undefined
+  );
+  const subscriptionCharacters = useCharacters(useMockData ? null : sessionId);
+  const memories = useMemories(useMockData ? null : sessionId);
+
+  const livePanels = useMockData ? mockPanels : (panels ?? []);
+  const previewPanels = previewGeneration
+    ? generationPanelsToDisplay(
+        parseGenerationPanels(previewGeneration.panelsJson)
+      )
+    : livePanels;
+  const displayPanels = previewGeneration ? previewPanels : livePanels;
   const displayTitle = useMockData
     ? mockSceneTitle
-    : (title ?? `Scene ${sceneNum}`);
-  const displaySummary = useMockData ? undefined : sceneSummary?.trim() || undefined;
+    : previewGeneration?.title?.trim() ||
+      (title ?? `Scene ${sceneNum}`);
+  const displaySummary = useMockData
+    ? undefined
+    : previewGeneration?.sceneSummary?.trim() ||
+      sceneSummary?.trim() ||
+      undefined;
   const displayGenre = genre ?? mockSession.genre;
   const displaySetting = setting ?? mockSession.setting;
   const displayTotal = totalScenes ?? mockSession.totalScenes;
@@ -116,164 +205,214 @@ export default function SceneScreen({
           : 'upcoming') as StoryAct['status'],
     }));
 
+  const pageImageUrl = useMockData
+    ? mockPageImageUrl?.trim() || undefined
+    : previewGeneration?.pageImageUrl?.trim() ||
+      currentSceneRow?.pageImageUrl?.trim() ||
+      undefined;
+  const isPreviewingGeneration = viewingGenerationId != null;
   const anyGenerating =
-    isGenerating || displayPanels.some(p => p.status === 'generating');
+    isGenerating || currentSceneRow?.status === 'generating';
+  const pageReady =
+    !!pageImageUrl ||
+    (currentSceneRow?.status === 'done' && displayPanels.length > 0);
   const isLastScene = sceneNum >= displayTotal;
   const isViewingHistory =
     sessionCurrentScene != null && sceneNum < sessionCurrentScene;
-  const railDisabled = anyGenerating || isLastScene || isViewingHistory;
-
-  const sceneDirectives = useSceneDirectives(
-    useMockData ? null : sessionId,
-    sceneNum
-  );
-  const currentSceneRow = useCurrentScene(
-    useMockData ? null : sessionId,
-    sceneNum
-  );
+  const isLiveScene =
+    sessionCurrentScene == null || sceneNum === sessionCurrentScene;
+  const canRetryPage =
+    !useMockData &&
+    isLiveScene &&
+    onRetryPage != null &&
+    currentSceneRow?.status === 'error' &&
+    !pageImageUrl;
+  const railDisabled =
+    anyGenerating || isLastScene || isViewingHistory || isAdvancePending;
   const sceneReady =
     !anyGenerating &&
-    displayPanels.length > 0 &&
-    displayPanels.every(p => p.status === 'done');
+    !!pageImageUrl &&
+    (useMockData ||
+      previewGeneration != null ||
+      currentSceneRow?.status === 'done');
+  const narrationPopulated =
+    !!previewGeneration?.narrationAudioUrl?.trim() ||
+    !!currentSceneRow?.narrationAudioUrl?.trim() ||
+    displayPanels.some(
+      p => p.status === 'done' && buildPanelNarrationText(p).length > 0
+    );
+  const sceneReadyForNarration =
+    sceneReady && narrationPopulated && !useMockData && !isPreviewingGeneration;
+  const canRestoreGeneration =
+    !useMockData &&
+    isLiveScene &&
+    !anyGenerating &&
+    onRestoreGeneration != null;
+  const canForkAtThisScene =
+    !useMockData &&
+    canForkAtScene?.(sceneNum) === true &&
+    onRequestFork != null;
+  const canForkScene = canForkAtThisScene && isViewingHistory;
+  const canForkGeneration =
+    canForkAtThisScene &&
+    isPreviewingGeneration &&
+    viewingGenerationId != null;
 
-  const [narrationEnabled, setNarrationEnabled] = useState(false);
-  const { play, stop, isPlaying, activePanelNum, muted, toggleMute } =
-    useSceneNarration({
-      panels: displayPanels,
-      characters,
-      enabled: narrationEnabled && sceneReady && !useMockData,
-    });
+  const hasForkablePastScenes = useMemo(() => {
+    if (useMockData || sessionCurrentScene == null || !canForkAtScene) {
+      return false;
+    }
+    for (let s = 1; s < sessionCurrentScene; s++) {
+      if (canForkAtScene(s)) return true;
+    }
+    return false;
+  }, [useMockData, sessionCurrentScene, canForkAtScene]);
 
-  useEffect(() => {
-    setNarrationEnabled(false);
-    stop();
-  }, [sceneNum, stop]);
+  const {
+    play,
+    stop,
+    isPlaying,
+    activePanelNum,
+    activeNarrationText,
+    muted,
+    toggleMute,
+  } = useSceneNarration({
+    panels: displayPanels,
+    characters,
+    audioUrl:
+      previewGeneration?.narrationAudioUrl ??
+      currentSceneRow?.narrationAudioUrl ??
+      undefined,
+    segmentsJson:
+      previewGeneration?.narrationSegmentsJson ??
+      currentSceneRow?.narrationSegmentsJson,
+    sceneKey: `${sessionId}-${sceneNum}-${viewingGenerationId?.toString() ?? 'live'}`,
+    autoPlayRequestId: autoNarrateRequestId,
+    canPlay: sceneReadyForNarration,
+  });
 
   const handleNarrationToggle = () => {
     if (isPlaying) {
       stop();
       return;
     }
-    setNarrationEnabled(true);
     if (muted) toggleMute();
     void play();
   };
 
-  const handleMute = () => {
-    if (muted) {
-      toggleMute();
-      return;
-    }
-    stop();
-    setNarrationEnabled(false);
-    toggleMute();
+  const handleRestore = (generationId: bigint) => {
+    onRestoreGeneration?.(generationId);
+    setViewingGenerationId(null);
   };
 
-  const storyHeader = formatStoryHeader(displayGenre, displaySetting);
+  const voicePresets = getNudgePresets(displayGenre);
+  const voiceNudge = useVoiceNudge({
+    presets: voicePresets,
+    disabled: railDisabled || useMockData,
+    onNudge,
+    onSubmitNudge,
+  });
 
   return (
     <div className="inkwell-page-bg flex h-full min-h-0 flex-col overflow-hidden">
-      <header className="flex shrink-0 items-center justify-between gap-4 border-b border-ink px-6 py-2 md:px-10">
-        <div className="flex min-w-0 shrink-0 items-center gap-2">
-          {onGoHome ? (
-            <button
-              type="button"
-              onClick={onGoHome}
-              className="font-display text-sm uppercase tracking-wide text-ink transition-colors hover:text-accent"
-            >
-              Inkwell
-            </button>
-          ) : (
-            <span className="font-display text-sm uppercase tracking-wide text-ink">
-              Inkwell
-            </span>
-          )}
-          <span className="font-label text-[10px] uppercase tracking-widest text-ink/40">
-            Overview
-          </span>
-        </div>
-
-        <p
-          className="min-w-0 flex-1 truncate px-4 text-center font-label text-xs uppercase tracking-widest text-ink"
-          title={storyHeader}
-        >
-          {storyHeader}
-        </p>
-
-        <div className="flex shrink-0 items-center gap-2 md:gap-3">
-          {sceneReady && !useMockData && (
-            <div className="hidden items-center gap-1 sm:flex">
+      <AppHeader
+        variant="scene"
+        onLogoClick={onGoHome}
+        actions={
+          <>
+            {!useMockData && !isViewingHistory && (
+              <VoiceNudgeButton
+                compact
+                disabled={railDisabled}
+                isListening={voiceNudge.isListening}
+                supported={voiceNudge.supported}
+                interimTranscript={voiceNudge.interimTranscript}
+                speechError={voiceNudge.speechError}
+                onToggle={voiceNudge.toggleListening}
+              />
+            )}
+            {sceneReadyForNarration && (
               <button
                 type="button"
                 onClick={handleNarrationToggle}
-                className={`border border-ink px-2 py-0.5 font-label text-[10px] uppercase ${
-                  isPlaying
-                    ? 'bg-accent text-paper'
-                    : 'bg-paper hover:bg-surface'
-                }`}
+                className={`scene-header-btn ${isPlaying ? 'scene-header-btn--active' : ''}`}
                 title={isPlaying ? 'Stop narration' : 'Listen to scene'}
               >
-                {isPlaying ? '■' : '🔊'}
+                {isPlaying ? 'Stop' : 'Listen'}
               </button>
-              {(narrationEnabled || isPlaying) && (
-                <button
-                  type="button"
-                  onClick={handleMute}
-                  className="border border-ink bg-paper px-2 py-0.5 font-label text-[10px] uppercase hover:bg-surface"
-                >
-                  {muted ? 'Unmute' : 'Mute'}
-                </button>
-              )}
-            </div>
-          )}
-          {sessionCurrentScene != null && (
-            <span
-              className={`border px-1.5 py-0.5 font-label text-[10px] uppercase tracking-widest ${
-                isViewingHistory
-                  ? 'border-ink/30 text-ink/55'
-                  : 'border-accent text-accent'
-              }`}
-            >
-              {isViewingHistory ? 'Past scene' : 'Live'}
-            </span>
-          )}
-          <span className="font-label text-[10px] uppercase tracking-widest text-ink/70">
-            Scene {sceneNum} / {displayTotal}
-          </span>
-          <SceneProgressDots
-            total={displayTotal}
-            current={sceneNum}
-            acts={displayActs}
-            isGenerating={anyGenerating}
-          />
-          {onOpenAllScenes && (
-            <button
-              type="button"
-              onClick={onOpenAllScenes}
-              className="font-label text-[10px] uppercase tracking-widest text-ink/60 hover:text-accent"
-            >
-              All scenes
-            </button>
-          )}
-        </div>
-      </header>
+            )}
+            {shareUrl && !useMockData && (
+              <ShareSessionButton
+                shareUrl={shareUrl}
+                disabled={anyGenerating}
+                compact
+              />
+            )}
+            {onOpenAllScenes && (
+              <button
+                type="button"
+                onClick={onOpenAllScenes}
+                className="scene-header-btn"
+              >
+                Scenes
+              </button>
+            )}
+          </>
+        }
+      />
+      {error && (
+        <p
+          className="shrink-0 border-b border-accent/25 bg-accent/5 px-5 py-1.5 font-label text-[10px] normal-case leading-snug text-accent md:px-8"
+          role="alert"
+        >
+          {error}
+        </p>
+      )}
 
       <div className="flex min-h-0 flex-1 overflow-hidden">
         <StoryThread
           acts={displayActs}
           currentSceneNum={sceneNum}
           onSelectAct={useMockData ? undefined : onSelectAct}
+          characters={useMockData ? undefined : subscriptionCharacters}
+          memories={useMockData ? undefined : memories}
+          generationCounts={useMockData ? undefined : generationCounts}
+          generations={useMockData ? undefined : generations}
+          viewingGenerationId={viewingGenerationId}
+          onSelectGeneration={
+            useMockData ? undefined : setViewingGenerationId
+          }
+          onRestoreGeneration={useMockData ? undefined : handleRestore}
+          canRestoreGeneration={canRestoreGeneration}
+          restoreGenerationDisabled={anyGenerating}
+          branches={useMockData ? undefined : storyBranches}
+          activeSessionId={sessionId}
+          onSwitchBranch={useMockData ? undefined : onSwitchBranch}
+          onForkGeneration={
+            useMockData || !canForkGeneration
+              ? undefined
+              : genId => onRequestFork?.(sceneNum, genId)
+          }
+          canForkGeneration={canForkGeneration}
+          forkDisabled={anyGenerating || forkPending}
           trail={
             useMockData
               ? undefined
               : {
-                  sceneNum,
+                  sceneNum: trailSceneNum,
                   sceneTitle: displayTitle,
-                  sceneSummary: displaySummary ?? currentSceneRow?.sceneSummary,
-                  sceneStatus: currentSceneRow?.status,
+                  sceneSummary:
+                    displaySummary ?? currentSceneRow?.sceneSummary,
+                  sceneStatus: previewGeneration?.status ?? currentSceneRow?.status,
+                  narrationStatus:
+                    previewGeneration?.narrationStatus ??
+                    currentSceneRow?.narrationStatus ??
+                    undefined,
+                  pageImageUrl,
                   panels: displayPanels,
                   directives: sceneDirectives,
-                  isGenerating: anyGenerating,
+                  isGenerating: anyGenerating && !isPreviewingGeneration,
+                  serverEvents: useMockData ? [] : activityEvents,
                 }
           }
         />
@@ -285,19 +424,48 @@ export default function SceneScreen({
             title={displayTitle}
             summary={displaySummary ?? currentSceneRow?.sceneSummary ?? undefined}
             activePanelNum={activePanelNum}
+            activeNarrationText={activeNarrationText}
+            isNarrating={isPlaying}
+            pageImageUrl={pageImageUrl}
+            isPageGenerating={anyGenerating && !pageReady}
+            onRetryPage={canRetryPage ? onRetryPage : undefined}
+            retryDisabled={anyGenerating}
           />
         </main>
 
         <DirectSceneRail
           genre={displayGenre}
           onNudge={onNudge}
+          onSubmitNudge={onSubmitNudge}
           onNextScene={onNextScene}
           disabled={railDisabled}
           isLastScene={isLastScene}
           isGenerating={anyGenerating}
           viewingHistory={isViewingHistory}
+          nudgeActorName={nudgeActorName}
+          nudgeActorIsSelf={nudgeActorIsSelf}
+          pendingNudge={pendingNudge}
+          nudgeOutcome={nudgeOutcome}
+          nudgeStatusMessage={nudgeStatusMessage}
+          coDirectHint={coDirectHint}
+          voiceNudge={voiceNudge}
+          onForkAtScene={
+            canForkScene ? () => onRequestFork?.(sceneNum) : undefined
+          }
+          canForkAtScene={canForkScene}
+          forkDisabled={anyGenerating || forkPending}
+          hasForkablePastScenes={hasForkablePastScenes}
         />
       </div>
+      <ForkConfirmModal
+        open={forkConfirm != null}
+        sceneNum={forkConfirm?.sceneNum ?? sceneNum}
+        branchLabel={forkConfirm?.branchLabel ?? branchLabel}
+        withGeneration={forkConfirm?.generationId != null}
+        pending={forkPending}
+        onConfirm={() => onConfirmFork?.()}
+        onCancel={() => onCancelFork?.()}
+      />
     </div>
   );
 }

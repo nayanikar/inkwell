@@ -2,6 +2,8 @@ import type { PanelData } from '../lib/types';
 
 type PanelProps = PanelData & {
   isActive?: boolean;
+  onRetry?: () => void;
+  retryDisabled?: boolean;
 };
 
 function panelBadge(num: number): string {
@@ -17,6 +19,8 @@ export default function Panel({
   layoutHint,
   status,
   isActive = false,
+  onRetry,
+  retryDisabled = false,
 }: PanelProps) {
   const hasImage = status === 'done' && imageUrl;
   const isCloseUp = layoutHint === 'close-up';
@@ -42,11 +46,35 @@ export default function Panel({
             className={`h-full w-full ${isCloseUp ? 'object-cover' : 'object-contain'}`}
           />
         ) : (
-          <div className="flex h-full flex-col items-center justify-center gap-1 bg-surface/50 px-4 text-center">
-            <span className="animate-pulse font-label text-[10px] uppercase tracking-widest text-ink/45">
-              {status === 'generating' ? 'Drawing…' : 'Waiting…'}
+          <button
+            type="button"
+            disabled={status !== 'error' || retryDisabled || !onRetry}
+            onClick={status === 'error' ? onRetry : undefined}
+            className={`flex h-full w-full flex-col items-center justify-center gap-1 bg-surface/50 px-4 text-center ${
+              status === 'error' && onRetry && !retryDisabled
+                ? 'cursor-pointer hover:bg-surface/80'
+                : ''
+            }`}
+          >
+            <span
+              className={`font-label text-[10px] uppercase tracking-widest ${
+                status === 'error'
+                  ? 'text-accent'
+                  : 'animate-pulse text-ink/45'
+              }`}
+            >
+              {status === 'generating'
+                ? 'Drawing…'
+                : status === 'error'
+                  ? 'Image failed'
+                  : 'Waiting…'}
             </span>
-          </div>
+            {status === 'error' && onRetry && !retryDisabled && (
+              <span className="font-label text-[9px] uppercase tracking-widest text-ink/45">
+                Tap to retry
+              </span>
+            )}
+          </button>
         )}
       </div>
     </article>

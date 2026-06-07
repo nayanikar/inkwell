@@ -10,6 +10,23 @@ import {
   type Infer as __Infer,
 } from "spacetimedb";
 
+export const AccessibleSessions = __t.object("AccessibleSessions", {});
+export type AccessibleSessions = __Infer<typeof AccessibleSessions>;
+
+export const ActivityEvent = __t.object("ActivityEvent", {
+  eventId: __t.u64(),
+  sessionId: __t.u64(),
+  sceneNum: __t.u32(),
+  kind: __t.string(),
+  label: __t.string(),
+  detail: __t.string(),
+  done: __t.bool(),
+  active: __t.bool(),
+  createdAt: __t.u64(),
+  generationId: __t.u64(),
+});
+export type ActivityEvent = __Infer<typeof ActivityEvent>;
+
 export const Character = __t.object("Character", {
   charId: __t.u64(),
   sessionId: __t.u64(),
@@ -17,7 +34,8 @@ export const Character = __t.object("Character", {
   archetype: __t.string(),
   personality: __t.string(),
   currentMood: __t.string(),
-  secret: __t.string(),
+  visualDescription: __t.string(),
+  referenceImageUrl: __t.string(),
 });
 export type Character = __Infer<typeof Character>;
 
@@ -27,8 +45,33 @@ export const CharacterInput = __t.object("CharacterInput", {
   personality: __t.string(),
   currentMood: __t.string(),
   secret: __t.string(),
+  visualDescription: __t.string(),
 });
 export type CharacterInput = __Infer<typeof CharacterInput>;
+
+export const CharacterSecret = __t.object("CharacterSecret", {
+  charId: __t.u64(),
+  sessionId: __t.u64(),
+  secret: __t.string(),
+});
+export type CharacterSecret = __Infer<typeof CharacterSecret>;
+
+export const CoDirector = __t.object("CoDirector", {
+  coDirectorId: __t.u64(),
+  sessionId: __t.u64(),
+  identity: __t.identity(),
+  displayName: __t.string(),
+  joinedAt: __t.u64(),
+});
+export type CoDirector = __Infer<typeof CoDirector>;
+
+export const DirectorPresence = __t.object("DirectorPresence", {
+  identity: __t.identity(),
+  displayName: __t.string(),
+  online: __t.bool(),
+  lastSeenAt: __t.u64(),
+});
+export type DirectorPresence = __Infer<typeof DirectorPresence>;
 
 export const Memory = __t.object("Memory", {
   memoryId: __t.u64(),
@@ -40,6 +83,9 @@ export const Memory = __t.object("Memory", {
 });
 export type Memory = __Infer<typeof Memory>;
 
+export const MySessions = __t.object("MySessions", {});
+export type MySessions = __Infer<typeof MySessions>;
+
 export const NarrativeDirective = __t.object("NarrativeDirective", {
   directiveId: __t.u64(),
   sessionId: __t.u64(),
@@ -49,6 +95,19 @@ export const NarrativeDirective = __t.object("NarrativeDirective", {
   appliedBy: __t.string(),
 });
 export type NarrativeDirective = __Infer<typeof NarrativeDirective>;
+
+export const NudgeEvent = __t.object("NudgeEvent", {
+  eventId: __t.u64(),
+  sessionId: __t.u64(),
+  targetScene: __t.u32(),
+  kind: __t.string(),
+  type: __t.string(),
+  content: __t.string(),
+  actorName: __t.string(),
+  detail: __t.string(),
+  createdAt: __t.u64(),
+});
+export type NudgeEvent = __Infer<typeof NudgeEvent>;
 
 export const Panel = __t.object("Panel", {
   panelId: __t.u64(),
@@ -66,6 +125,30 @@ export const Panel = __t.object("Panel", {
 });
 export type Panel = __Infer<typeof Panel>;
 
+export const PanelRetryQueue = __t.object("PanelRetryQueue", {
+  retryId: __t.u64(),
+  scheduledAt: __t.scheduleAt(),
+  sessionId: __t.u64(),
+  sceneId: __t.u64(),
+  panelId: __t.u64(),
+  sceneNum: __t.u32(),
+  panelNum: __t.u32(),
+  attempt: __t.u32(),
+  lastError: __t.string(),
+});
+export type PanelRetryQueue = __Infer<typeof PanelRetryQueue>;
+
+export const PendingNudge = __t.object("PendingNudge", {
+  sessionId: __t.u64(),
+  targetScene: __t.u32(),
+  type: __t.string(),
+  content: __t.string(),
+  submittedBy: __t.identity(),
+  submittedByName: __t.string(),
+  submittedAt: __t.u64(),
+});
+export type PendingNudge = __Infer<typeof PendingNudge>;
+
 export const Scene = __t.object("Scene", {
   sceneId: __t.u64(),
   sessionId: __t.u64(),
@@ -74,18 +157,114 @@ export const Scene = __t.object("Scene", {
   status: __t.string(),
   createdAt: __t.u64(),
   sceneSummary: __t.string(),
+  pageImageUrl: __t.string(),
+  narrationAudioUrl: __t.string(),
+  narrationSegmentsJson: __t.string(),
+  narrationStatus: __t.string(),
+  currentGenerationId: __t.u64(),
 });
 export type Scene = __Infer<typeof Scene>;
 
+export const SceneGeneration = __t.object("SceneGeneration", {
+  generationId: __t.u64(),
+  sessionId: __t.u64(),
+  sceneNum: __t.u32(),
+  sourceSceneId: __t.u64(),
+  generationNum: __t.u32(),
+  kind: __t.string(),
+  reason: __t.string(),
+  title: __t.string(),
+  sceneSummary: __t.string(),
+  pageImageUrl: __t.string(),
+  narrationAudioUrl: __t.string(),
+  narrationSegmentsJson: __t.string(),
+  narrationStatus: __t.string(),
+  panelsJson: __t.string(),
+  status: __t.string(),
+  isCurrent: __t.bool(),
+  createdAt: __t.u64(),
+  supersededAt: __t.u64(),
+});
+export type SceneGeneration = __Infer<typeof SceneGeneration>;
+
+export const ScenePendingFinalize = __t.object("ScenePendingFinalize", {
+  sceneId: __t.u64(),
+  sessionId: __t.u64(),
+  sceneNum: __t.u32(),
+  moodUpdatesJson: __t.string(),
+  memoriesJson: __t.string(),
+  visualContextJson: __t.string(),
+});
+export type ScenePendingFinalize = __Infer<typeof ScenePendingFinalize>;
+
 export const Session = __t.object("Session", {
   sessionId: __t.u64(),
+  ownerIdentity: __t.identity(),
+  inviteCode: __t.string(),
   genre: __t.string(),
   setting: __t.string(),
   styleBible: __t.string(),
   totalScenes: __t.u32(),
   currentScene: __t.u32(),
+  generatingScene: __t.u32(),
   status: __t.string(),
   createdAt: __t.u64(),
+  rootSessionId: __t.u64(),
+  parentSessionId: __t.u64(),
+  forkSceneNum: __t.u32(),
+  forkGenerationId: __t.u64(),
+  branchLabel: __t.string(),
+  forkedAt: __t.u64(),
 });
 export type Session = __Infer<typeof Session>;
+
+export const StoryBranchEntry = __t.object("StoryBranchEntry", {
+  sessionId: __t.u64(),
+  rootSessionId: __t.u64(),
+  parentSessionId: __t.u64(),
+  forkSceneNum: __t.u32(),
+  forkGenerationId: __t.u64(),
+  branchLabel: __t.string(),
+  forkedAt: __t.u64(),
+  currentScene: __t.u32(),
+  totalScenes: __t.u32(),
+  generatingScene: __t.u32(),
+  isRoot: __t.bool(),
+  role: __t.string(),
+  genre: __t.string(),
+  setting: __t.string(),
+  createdAt: __t.u64(),
+});
+export type StoryBranchEntry = __Infer<typeof StoryBranchEntry>;
+
+export const StoryBranches = __t.object("StoryBranches", {});
+export type StoryBranches = __Infer<typeof StoryBranches>;
+
+export const StoryLibrary = __t.object("StoryLibrary", {});
+export type StoryLibrary = __Infer<typeof StoryLibrary>;
+
+export const StoryLibraryEntry = __t.object("StoryLibraryEntry", {
+  sessionId: __t.u64(),
+  genre: __t.string(),
+  setting: __t.string(),
+  status: __t.string(),
+  currentScene: __t.u32(),
+  totalScenes: __t.u32(),
+  generatingScene: __t.u32(),
+  resumeScene: __t.u32(),
+  scenesDone: __t.u32(),
+  isComplete: __t.bool(),
+  isGenerating: __t.bool(),
+  role: __t.string(),
+  coverPageImageUrl: __t.string(),
+  createdAt: __t.u64(),
+  rootSessionId: __t.u64(),
+  parentSessionId: __t.u64(),
+  forkSceneNum: __t.u32(),
+  branchLabel: __t.string(),
+  forkedAt: __t.u64(),
+  isFork: __t.bool(),
+  branchCount: __t.u32(),
+});
+export type StoryLibraryEntry = __Infer<typeof StoryLibraryEntry>;
 

@@ -26,22 +26,14 @@ export const connectionBuilder = DbConnection.builder()
     console.error('SpacetimeDB connection error:', err);
   });
 
-export function subscribeToSession(conn: DbConnection, sessionId: bigint) {
-  return conn.subscriptionBuilder().subscribe([
-    tables.session.where(r => r.sessionId.eq(sessionId)),
-    tables.character.where(r => r.sessionId.eq(sessionId)),
-    tables.scene.where(r => r.sessionId.eq(sessionId)),
-    tables.panel.where(r => r.sessionId.eq(sessionId)),
-    tables.narrativeDirective.where(r => r.sessionId.eq(sessionId)),
-    tables.memory.where(r => r.sessionId.eq(sessionId)),
-  ]);
+/** @deprecated Subscriptions are managed automatically by useTable hooks. */
+export function subscribeToSession(_conn: DbConnection, _sessionId: bigint) {
+  /* no-op — useTable handles subscriptions */
 }
 
-export function subscribeToAllSessions(conn: DbConnection) {
-  return conn.subscriptionBuilder().subscribe([
-    tables.session,
-    tables.character,
-    tables.scene,
-    tables.panel,
-  ]);
+/** @deprecated Subscriptions are managed automatically by useTable hooks. */
+export function subscribeToAllSessions(_conn: DbConnection) {
+  /* no-op — useTable handles subscriptions */
 }
+
+export { tables };

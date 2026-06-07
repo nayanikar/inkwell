@@ -8,6 +8,7 @@ export type CharacterFormRow = {
   archetype: string;
   personality: string;
   currentMood: string;
+  visual_description: string;
   secret: string;
 };
 
@@ -25,6 +26,7 @@ type SetupScreenProps = {
   onGoHome?: () => void;
   savedSession?: SavedSession | null;
   isSubmitting?: boolean;
+  error?: string | null;
 };
 
 const GENRES = [
@@ -45,6 +47,7 @@ const emptyCharacter = (): CharacterFormRow => ({
   archetype: '',
   personality: '',
   currentMood: 'neutral',
+  visual_description: '',
   secret: '',
 });
 
@@ -93,6 +96,7 @@ export default function SetupScreen({
   onGoHome,
   savedSession,
   isSubmitting = false,
+  error = null,
 }: SetupScreenProps) {
   const [genre, setGenre] = useState<string | null>(null);
   const [setting, setSetting] = useState('');
@@ -139,6 +143,8 @@ export default function SetupScreen({
   return (
     <InkwellPageShell
       onLogoClick={onGoHome}
+      showConnection
+      error={error}
       headerRight={
         savedSession && onContinueStory ? (
           <ResumeStoryLink
@@ -297,6 +303,14 @@ export default function SetupScreen({
                       onChange={e => updateCharacter(i, 'personality', e.target.value)}
                       placeholder="Who they are"
                       required
+                      className="mt-2 w-full border border-ink/40 bg-paper px-3 py-1.5 font-body text-base italic text-ink placeholder:text-ink-muted/70 focus:outline-none"
+                    />
+                    <input
+                      value={c.visual_description}
+                      onChange={e =>
+                        updateCharacter(i, 'visual_description', e.target.value)
+                      }
+                      placeholder="Species + silhouette — e.g. small white goat kid, tiny horns, nightgown"
                       className="mt-2 w-full border border-ink/40 bg-paper px-3 py-1.5 font-body text-base italic text-ink placeholder:text-ink-muted/70 focus:outline-none"
                     />
                     <input

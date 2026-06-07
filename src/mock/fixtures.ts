@@ -66,4 +66,6 @@ export const mockPanels: PanelData[] = [
   },
 ];
 
+export const mockPageImageUrl = '';
+
 export const mockSceneTitle = 'The Rain Never Quits';

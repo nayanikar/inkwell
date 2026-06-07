@@ -7,9 +7,20 @@ function getSpeechRecognitionCtor():
   return window.SpeechRecognition ?? window.webkitSpeechRecognition ?? null;
 }
 
-export function useSpeechRecognition() {
+type UseSpeechRecognitionOptions = {
+  onFinalTranscript?: (text: string) => void;
+  interimResults?: boolean;
+  lang?: string;
+};
+
+export function useSpeechRecognition(options: UseSpeechRecognitionOptions = {}) {
+  const { onFinalTranscript, interimResults = true, lang = 'en-US' } = options;
+  const onFinalRef = useRef(onFinalTranscript);
+  onFinalRef.current = onFinalTranscript;
+
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState('');
+  const [interimTranscript, setInterimTranscript] = useState('');
   const [error, setError] = useState<string | null>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const supported = getSpeechRecognitionCtor() != null;
@@ -23,6 +34,7 @@ export function useSpeechRecognition() {
   const stop = useCallback(() => {
     recognitionRef.current?.stop();
     setIsListening(false);
+    setInterimTranscript('');
   }, []);
 
   const start = useCallback(() => {
@@ -34,15 +46,31 @@ export function useSpeechRecognition() {
 
     setError(null);
     setTranscript('');
+    setInterimTranscript('');
 
     const recognition = new Ctor();
     recognition.continuous = false;
-    recognition.interimResults = false;
-    recognition.lang = 'en-US';
+    recognition.interimResults = interimResults;
+    recognition.lang = lang;
 
     recognition.onresult = (event: SpeechRecognitionEvent) => {
-      const text = event.results[0]?.[0]?.transcript?.trim();
-      if (text) setTranscript(text);
+      let interim = '';
+      let finalText = '';
+
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const result = event.results[i];
+        const text = result?.[0]?.transcript?.trim() ?? '';
+        if (!text) continue;
+        if (result.isFinal) finalText = text;
+        else interim = text;
+      }
+
+      if (interim) setInterimTranscript(interim);
+      if (finalText) {
+        setTranscript(finalText);
+        setInterimTranscript('');
+        onFinalRef.current?.(finalText);
+      }
     };
 
     recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
@@ -50,24 +78,38 @@ export function useSpeechRecognition() {
         setError(
           event.error === 'not-allowed'
             ? 'Microphone access denied'
-            : event.error
+            : event.error === 'no-speech'
+              ? 'No speech detected'
+              : event.error
         );
       }
       setIsListening(false);
+      setInterimTranscript('');
     };
 
     recognition.onend = () => {
       setIsListening(false);
+      setInterimTranscript('');
     };
 
     recognitionRef.current = recognition;
     setIsListening(true);
     recognition.start();
-  }, []);
+  }, [interimResults, lang]);
 
   const clearTranscript = useCallback(() => {
     setTranscript('');
+    setInterimTranscript('');
   }, []);
 
-  return { isListening, transcript, start, stop, supported, error, clearTranscript };
+  return {
+    isListening,
+    transcript,
+    interimTranscript,
+    start,
+    stop,
+    supported,
+    error,
+    clearTranscript,
+  };
 }
