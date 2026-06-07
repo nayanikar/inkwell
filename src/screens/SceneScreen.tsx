@@ -30,12 +30,6 @@ import {
 } from '../lib/hooks';
 import type { PendingNudgeRow, StoryBranchRow } from '../lib/hooks';
 import type { NudgeOutcome } from '../hooks/useInkwellSession';
-import {
-  mockPanels,
-  mockPageImageUrl,
-  mockSceneTitle,
-  mockSession,
-} from '../mock/fixtures';
 
 type SceneScreenProps = {
   sessionId: bigint;
@@ -58,7 +52,6 @@ type SceneScreenProps = {
   onGoHome?: () => void;
   isGenerating?: boolean;
   isAdvancePending?: boolean;
-  useMockData?: boolean;
   shareUrl?: string | null;
   onRetryPage?: () => void;
   nudgeActorName?: string | null;
@@ -107,7 +100,6 @@ export default function SceneScreen({
   onGoHome,
   isGenerating = false,
   isAdvancePending = false,
-  useMockData = false,
   shareUrl,
   onRetryPage,
   nudgeActorName,
@@ -141,19 +133,19 @@ export default function SceneScreen({
 
   const trailSceneNum = sceneNum;
   const sceneDirectives = useSceneDirectives(
-    useMockData ? null : sessionId,
+    sessionId,
     trailSceneNum
   );
   const currentSceneRow = useCurrentScene(
-    useMockData ? null : sessionId,
+    sessionId,
     sceneNum
   );
   const generations = useSceneGenerations(
-    useMockData ? null : sessionId,
+    sessionId,
     sceneNum
   );
   const generationCounts = useGenerationCounts(
-    useMockData ? null : sessionId
+    sessionId
   );
   const previewGeneration = useMemo(
     () =>
@@ -163,34 +155,31 @@ export default function SceneScreen({
     [generations, viewingGenerationId]
   );
   const activityEvents = useActivityEvents(
-    useMockData ? null : sessionId,
+    sessionId,
     trailSceneNum,
     viewingGenerationId ??
       currentSceneRow?.currentGenerationId ??
       undefined
   );
-  const subscriptionCharacters = useCharacters(useMockData ? null : sessionId);
-  const memories = useMemories(useMockData ? null : sessionId);
+  const subscriptionCharacters = useCharacters(sessionId);
+  const memories = useMemories(sessionId);
 
-  const livePanels = useMockData ? mockPanels : (panels ?? []);
+  const livePanels = panels ?? [];
   const previewPanels = previewGeneration
     ? generationPanelsToDisplay(
         parseGenerationPanels(previewGeneration.panelsJson)
       )
     : livePanels;
   const displayPanels = previewGeneration ? previewPanels : livePanels;
-  const displayTitle = useMockData
-    ? mockSceneTitle
-    : previewGeneration?.title?.trim() ||
-      (title ?? `Scene ${sceneNum}`);
-  const displaySummary = useMockData
-    ? undefined
-    : previewGeneration?.sceneSummary?.trim() ||
-      sceneSummary?.trim() ||
-      undefined;
-  const displayGenre = genre ?? mockSession.genre;
-  const displaySetting = setting ?? mockSession.setting;
-  const displayTotal = totalScenes ?? mockSession.totalScenes;
+  const displayTitle =
+    previewGeneration?.title?.trim() || (title ?? `Scene ${sceneNum}`);
+  const displaySummary =
+    previewGeneration?.sceneSummary?.trim() ||
+    sceneSummary?.trim() ||
+    undefined;
+  const displayGenre = genre ?? 'noir';
+  const displaySetting = setting ?? '';
+  const displayTotal = totalScenes ?? 4;
   const displayActs =
     acts ??
     Array.from({ length: displayTotal }, (_, i) => ({
@@ -205,11 +194,10 @@ export default function SceneScreen({
           : 'upcoming') as StoryAct['status'],
     }));
 
-  const pageImageUrl = useMockData
-    ? mockPageImageUrl?.trim() || undefined
-    : previewGeneration?.pageImageUrl?.trim() ||
-      currentSceneRow?.pageImageUrl?.trim() ||
-      undefined;
+  const pageImageUrl =
+    previewGeneration?.pageImageUrl?.trim() ||
+    currentSceneRow?.pageImageUrl?.trim() ||
+    undefined;
   const isPreviewingGeneration = viewingGenerationId != null;
   const anyGenerating =
     isGenerating || currentSceneRow?.status === 'generating';
@@ -222,7 +210,6 @@ export default function SceneScreen({
   const isLiveScene =
     sessionCurrentScene == null || sceneNum === sessionCurrentScene;
   const canRetryPage =
-    !useMockData &&
     isLiveScene &&
     onRetryPage != null &&
     currentSceneRow?.status === 'error' &&
@@ -232,9 +219,7 @@ export default function SceneScreen({
   const sceneReady =
     !anyGenerating &&
     !!pageImageUrl &&
-    (useMockData ||
-      previewGeneration != null ||
-      currentSceneRow?.status === 'done');
+    (previewGeneration != null || currentSceneRow?.status === 'done');
   const narrationPopulated =
     !!previewGeneration?.narrationAudioUrl?.trim() ||
     !!currentSceneRow?.narrationAudioUrl?.trim() ||
@@ -242,14 +227,12 @@ export default function SceneScreen({
       p => p.status === 'done' && buildPanelNarrationText(p).length > 0
     );
   const sceneReadyForNarration =
-    sceneReady && narrationPopulated && !useMockData && !isPreviewingGeneration;
+    sceneReady && narrationPopulated && !isPreviewingGeneration;
   const canRestoreGeneration =
-    !useMockData &&
     isLiveScene &&
     !anyGenerating &&
     onRestoreGeneration != null;
   const canForkAtThisScene =
-    !useMockData &&
     canForkAtScene?.(sceneNum) === true &&
     onRequestFork != null;
   const canForkScene = canForkAtThisScene && isViewingHistory;
@@ -259,14 +242,14 @@ export default function SceneScreen({
     viewingGenerationId != null;
 
   const hasForkablePastScenes = useMemo(() => {
-    if (useMockData || sessionCurrentScene == null || !canForkAtScene) {
+    if (sessionCurrentScene == null || !canForkAtScene) {
       return false;
     }
     for (let s = 1; s < sessionCurrentScene; s++) {
       if (canForkAtScene(s)) return true;
     }
     return false;
-  }, [useMockData, sessionCurrentScene, canForkAtScene]);
+  }, [sessionCurrentScene, canForkAtScene]);
 
   const {
     play,
@@ -308,7 +291,7 @@ export default function SceneScreen({
   const voicePresets = getNudgePresets(displayGenre);
   const voiceNudge = useVoiceNudge({
     presets: voicePresets,
-    disabled: railDisabled || useMockData,
+    disabled: railDisabled,
     onNudge,
     onSubmitNudge,
   });
@@ -320,7 +303,7 @@ export default function SceneScreen({
         onLogoClick={onGoHome}
         actions={
           <>
-            {!useMockData && !isViewingHistory && (
+            {!isViewingHistory && (
               <VoiceNudgeButton
                 compact
                 disabled={railDisabled}
@@ -341,7 +324,7 @@ export default function SceneScreen({
                 {isPlaying ? 'Stop' : 'Listen'}
               </button>
             )}
-            {shareUrl && !useMockData && (
+            {shareUrl && (
               <ShareSessionButton
                 shareUrl={shareUrl}
                 disabled={anyGenerating}
@@ -373,48 +356,44 @@ export default function SceneScreen({
         <StoryThread
           acts={displayActs}
           currentSceneNum={sceneNum}
-          onSelectAct={useMockData ? undefined : onSelectAct}
-          characters={useMockData ? undefined : subscriptionCharacters}
-          memories={useMockData ? undefined : memories}
-          generationCounts={useMockData ? undefined : generationCounts}
-          generations={useMockData ? undefined : generations}
+          onSelectAct={onSelectAct}
+          characters={subscriptionCharacters}
+          memories={memories}
+          generationCounts={generationCounts}
+          generations={generations}
           viewingGenerationId={viewingGenerationId}
           onSelectGeneration={
-            useMockData ? undefined : setViewingGenerationId
+            setViewingGenerationId
           }
-          onRestoreGeneration={useMockData ? undefined : handleRestore}
+          onRestoreGeneration={handleRestore}
           canRestoreGeneration={canRestoreGeneration}
           restoreGenerationDisabled={anyGenerating}
-          branches={useMockData ? undefined : storyBranches}
+          branches={storyBranches}
           activeSessionId={sessionId}
-          onSwitchBranch={useMockData ? undefined : onSwitchBranch}
+          onSwitchBranch={onSwitchBranch}
           onForkGeneration={
-            useMockData || !canForkGeneration
+            !canForkGeneration
               ? undefined
               : genId => onRequestFork?.(sceneNum, genId)
           }
           canForkGeneration={canForkGeneration}
           forkDisabled={anyGenerating || forkPending}
-          trail={
-            useMockData
-              ? undefined
-              : {
-                  sceneNum: trailSceneNum,
-                  sceneTitle: displayTitle,
-                  sceneSummary:
-                    displaySummary ?? currentSceneRow?.sceneSummary,
-                  sceneStatus: previewGeneration?.status ?? currentSceneRow?.status,
-                  narrationStatus:
-                    previewGeneration?.narrationStatus ??
-                    currentSceneRow?.narrationStatus ??
-                    undefined,
-                  pageImageUrl,
-                  panels: displayPanels,
-                  directives: sceneDirectives,
-                  isGenerating: anyGenerating && !isPreviewingGeneration,
-                  serverEvents: useMockData ? [] : activityEvents,
-                }
-          }
+          trail={{
+            sceneNum: trailSceneNum,
+            sceneTitle: displayTitle,
+            sceneSummary:
+              displaySummary ?? currentSceneRow?.sceneSummary,
+            sceneStatus: previewGeneration?.status ?? currentSceneRow?.status,
+            narrationStatus:
+              previewGeneration?.narrationStatus ??
+              currentSceneRow?.narrationStatus ??
+              undefined,
+            pageImageUrl,
+            panels: displayPanels,
+            directives: sceneDirectives,
+            isGenerating: anyGenerating && !isPreviewingGeneration,
+            serverEvents: activityEvents,
+          }}
         />
 
         <main className="min-h-0 flex-1 overflow-hidden border-x border-ink px-4 py-3 md:px-6">

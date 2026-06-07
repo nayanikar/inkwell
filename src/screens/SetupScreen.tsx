@@ -21,7 +21,6 @@ export type SetupFormData = {
 
 type SetupScreenProps = {
   onStart?: (data: SetupFormData) => void | Promise<void>;
-  onPreviewScene?: () => void;
   onContinueStory?: () => void;
   onGoHome?: () => void;
   savedSession?: SavedSession | null;
@@ -60,15 +59,17 @@ function Section({
   number,
   title,
   hint,
+  className,
   children,
 }: {
   number: string;
   title: string;
   hint?: string;
+  className?: string;
   children: ReactNode;
 }) {
   return (
-    <section className="flex flex-col">
+    <section className={`flex flex-col ${className ?? ''}`}>
       <div className="mb-2 flex items-baseline justify-between">
         <div className="flex items-baseline gap-2">
           <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-ink-muted">
@@ -91,7 +92,6 @@ function Section({
 
 export default function SetupScreen({
   onStart,
-  onPreviewScene,
   onContinueStory,
   onGoHome,
   savedSession,
@@ -160,15 +160,6 @@ export default function SetupScreen({
       }
       footerRight={
         <div className="flex shrink-0 items-center gap-3">
-          {onPreviewScene && (
-            <button
-              type="button"
-              onClick={onPreviewScene}
-              className="font-mono text-[10px] uppercase tracking-[0.25em] text-ink-muted hover:text-ink"
-            >
-              Preview mock
-            </button>
-          )}
           <button
             type="submit"
             form="setup-form"
@@ -185,7 +176,7 @@ export default function SetupScreen({
         onSubmit={handleSubmit}
         className="mx-auto flex h-full w-full max-w-6xl flex-1 flex-col overflow-hidden px-8 pt-5"
       >
-        <div className="flex items-baseline justify-between">
+        <div className="flex shrink-0 items-baseline justify-between">
           <div>
             <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-ink-muted">
               Story setup
@@ -249,7 +240,7 @@ export default function SetupScreen({
           </div>
 
           <div className="flex min-h-0 flex-col gap-4 overflow-hidden">
-            <Section number="03" title="Setting" hint="Where and when.">
+            <Section number="03" title="Setting" hint="Where and when." className="shrink-0">
               <div className="rounded-md border-2 border-ink bg-paper-surface p-2">
                 <input
                   value={setting}
@@ -265,8 +256,9 @@ export default function SetupScreen({
               number="04"
               title="Characters"
               hint={`2 to 4. (${characters.length}/4)`}
+              className="flex min-h-0 flex-1 flex-col overflow-hidden"
             >
-              <div className="inkwell-scroll min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
+              <div className="inkwell-scroll min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain pr-1 pb-2">
                 {characters.map((c, i) => (
                   <div
                     key={i}
@@ -326,7 +318,7 @@ export default function SetupScreen({
                 <button
                   type="button"
                   onClick={addCharacter}
-                  className="mt-2 font-mono text-[11px] uppercase tracking-[0.25em] text-ink-muted hover:text-ink"
+                  className="mt-2 shrink-0 font-mono text-[11px] uppercase tracking-[0.25em] text-ink-muted hover:text-ink"
                 >
                   + Add character
                 </button>

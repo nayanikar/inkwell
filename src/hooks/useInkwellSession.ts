@@ -107,7 +107,6 @@ export function useInkwellSession() {
     null
   );
   const [isJoining, setIsJoining] = useState(false);
-  const [useMockPreview, setUseMockPreview] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [autoNarrateRequestId, setAutoNarrateRequestId] = useState(0);
 
@@ -143,7 +142,7 @@ export function useInkwellSession() {
       : session.sessionId;
   }, [session]);
   const storyBranches = useStoryBranches(
-    useMockPreview ? null : rootSessionId
+    rootSessionId
   );
   const accessibleSessions = useAccessibleSessions();
   const storyLibraryRows = useStoryLibrary();
@@ -165,17 +164,17 @@ export function useInkwellSession() {
     optimisticGeneratingScene ?? 0
   );
   const directorsOnline = useSessionDirectorsOnline(
-    useMockPreview ? null : sessionId
+    sessionId
   );
-  const sessionRole = useSessionRole(useMockPreview ? null : sessionId);
+  const sessionRole = useSessionRole(sessionId);
   const liveDirectives = useSceneDirectives(
-    useMockPreview ? null : sessionId,
+    sessionId,
     session?.currentScene ?? sceneNum
   );
-  const pendingNudge = usePendingNudge(useMockPreview ? null : sessionId);
+  const pendingNudge = usePendingNudge(sessionId);
   const selfPresence = useSelfPresence();
   const generationCounts = useGenerationCounts(
-    useMockPreview ? null : sessionId
+    sessionId
   );
 
   const otherDirectorsOnline = useMemo(
@@ -184,7 +183,6 @@ export function useInkwellSession() {
   );
   const remoteGenerating =
     sessionId != null &&
-    !useMockPreview &&
     liveSceneGenerating &&
     !procedurePending &&
     optimisticGeneratingScene !== liveSceneNum &&
@@ -212,7 +210,6 @@ export function useInkwellSession() {
 
   const serverGenerating =
     sessionId != null &&
-    !useMockPreview &&
     session != null &&
     session.generatingScene !== 0;
 
@@ -230,7 +227,6 @@ export function useInkwellSession() {
     procedurePending ||
     (optimisticGeneratingScene != null &&
       sessionId != null &&
-      !useMockPreview &&
       !liveSceneComplete);
 
   const storyActs = useStoryActs(
@@ -242,7 +238,7 @@ export function useInkwellSession() {
   );
 
   const shareUrl = useMemo(() => {
-    if (sessionId == null || !session?.inviteCode || useMockPreview) {
+    if (sessionId == null || !session?.inviteCode ) {
       return null;
     }
     const url = new URL(window.location.href);
@@ -250,7 +246,7 @@ export function useInkwellSession() {
     url.searchParams.set('session', sessionId.toString());
     url.searchParams.set('code', session.inviteCode);
     return url.toString();
-  }, [sessionId, session?.inviteCode, useMockPreview]);
+  }, [sessionId, session?.inviteCode]);
 
   useEffect(() => {
     followLiveRef.current = true;
@@ -260,7 +256,7 @@ export function useInkwellSession() {
 
   // Follow live scene when session advances; stay on past scene during generation if following live.
   useEffect(() => {
-    if (sessionId == null || useMockPreview || !session) return;
+    if (sessionId == null  || !session) return;
     if (procedurePending) return;
 
     const live = session.currentScene;
@@ -289,7 +285,6 @@ export function useInkwellSession() {
   }, [
     session?.currentScene,
     sessionId,
-    useMockPreview,
     sceneNum,
     session,
     procedurePending,
@@ -297,7 +292,7 @@ export function useInkwellSession() {
 
   // Switch to the new scene once its page image is ready (after advance/nudge).
   useEffect(() => {
-    if (sessionId == null || useMockPreview || !session || !liveScene) return;
+    if (sessionId == null  || !session || !liveScene) return;
     if (!followLiveRef.current) return;
     if (sceneNum >= session.currentScene) return;
     if (liveScene.status === 'generating') return;
@@ -316,7 +311,6 @@ export function useInkwellSession() {
     session?.currentScene,
     sceneNum,
     sessionId,
-    useMockPreview,
     session,
     liveScene,
     bumpAutoNarrate,
@@ -324,7 +318,7 @@ export function useInkwellSession() {
 
   // Auto-narrate when live scene finishes without a scene switch (e.g. Scene 1 on start).
   useEffect(() => {
-    if (sessionId == null || useMockPreview || !session || !liveScene) return;
+    if (sessionId == null  || !session || !liveScene) return;
     if (!followLiveRef.current) return;
     if (sceneNum !== session.currentScene) return;
 
@@ -340,7 +334,6 @@ export function useInkwellSession() {
     sceneNum,
     session?.currentScene,
     sessionId,
-    useMockPreview,
     session,
     liveScene,
     bumpAutoNarrate,
@@ -362,7 +355,7 @@ export function useInkwellSession() {
   ]);
 
   useEffect(() => {
-    if (sessionId == null || useMockPreview || !session) return;
+    if (sessionId == null  || !session) return;
     if (session.generatingScene !== 0) return;
 
     const liveDone =
@@ -375,7 +368,6 @@ export function useInkwellSession() {
     }
   }, [
     sessionId,
-    useMockPreview,
     session?.generatingScene,
     liveScene?.status,
     liveScene?.pageImageUrl,
@@ -392,7 +384,7 @@ export function useInkwellSession() {
   }, [nudgeOutcome]);
 
   useEffect(() => {
-    if (!connected || sessionId == null || useMockPreview || !session) return;
+    if (!connected || sessionId == null  || !session) return;
     if (procedurePending || isAdvancePending) return;
 
     const liveStatus = liveScene?.status;
@@ -431,7 +423,6 @@ export function useInkwellSession() {
   }, [
     connected,
     sessionId,
-    useMockPreview,
     session?.generatingScene,
     liveScene?.status,
     liveScene?.pageImageUrl,
@@ -444,7 +435,7 @@ export function useInkwellSession() {
   ]);
 
   useEffect(() => {
-    if (sessionId == null || useMockPreview || !session) return;
+    if (sessionId == null  || !session) return;
     if (session.status === 'done') {
       clearSavedSession();
       return;
@@ -463,7 +454,6 @@ export function useInkwellSession() {
     });
   }, [
     sessionId,
-    useMockPreview,
     session?.genre,
     session?.setting,
     session?.status,
@@ -487,7 +477,7 @@ export function useInkwellSession() {
 
   const handleJoinSession = useCallback(
     async (id: bigint, inviteCode: string) => {
-      if (!connected || useMockPreview) return;
+      if (!connected ) return;
       setIsJoining(true);
       setError(null);
       try {
@@ -498,7 +488,6 @@ export function useInkwellSession() {
         followLiveRef.current = true;
         prevLiveSceneRef.current = null;
         setSceneNum(1);
-        setUseMockPreview(false);
         setScreen('scene');
       } catch (err) {
         setError(friendlyProcedureError(err, 'Failed to join session'));
@@ -506,11 +495,11 @@ export function useInkwellSession() {
         setIsJoining(false);
       }
     },
-    [connected, joinSession, useMockPreview]
+    [connected, joinSession]
   );
 
   useEffect(() => {
-    if (useMockPreview || !connected) return;
+    if (!connected) return;
     const params = new URLSearchParams(window.location.search);
     const sessionParam = params.get('session');
     const codeParam = params.get('code');
@@ -526,10 +515,10 @@ export function useInkwellSession() {
         next ? `?${next}` : window.location.pathname
       );
     });
-  }, [connected, handleJoinSession, useMockPreview]);
+  }, [connected, handleJoinSession]);
 
   const handleGoHome = () => {
-    if (sessionId != null && !useMockPreview && session) {
+    if (sessionId != null && session) {
       saveSessionProgress({
         sessionId: sessionId.toString(),
         sceneNum: session.currentScene,
@@ -542,7 +531,6 @@ export function useInkwellSession() {
     resumeAttemptRef.current = null;
     setScreen('landing');
     setSessionId(null);
-    setUseMockPreview(false);
     setError(null);
   };
 
@@ -557,7 +545,6 @@ export function useInkwellSession() {
     followLiveRef.current = true;
     prevLiveSceneRef.current = null;
     setSceneNum(row.currentScene);
-    setUseMockPreview(false);
     setScreen('scene');
     setError(null);
   };
@@ -568,7 +555,6 @@ export function useInkwellSession() {
       return;
     }
     setIsSubmitting(true);
-    setUseMockPreview(false);
     resetGenerationClientState();
     resumeAttemptRef.current = null;
     setError(null);
@@ -600,7 +586,7 @@ export function useInkwellSession() {
   };
 
   const handleSubmitNudge = async (type: string, content: string) => {
-    if (sessionId == null || !session || useMockPreview) return;
+    if (sessionId == null || !session ) return;
     if (sceneNum !== session.currentScene) return;
     if (session.currentScene >= session.totalScenes || isGenerating || isAdvancePending) return;
 
@@ -618,7 +604,7 @@ export function useInkwellSession() {
   };
 
   const handleNudge = async (type: string, content: string) => {
-    if (sessionId == null || !session || useMockPreview) return;
+    if (sessionId == null || !session ) return;
     if (sceneNum !== session.currentScene) return;
     if (session.currentScene >= session.totalScenes || isGenerating || isAdvancePending) return;
 
@@ -650,7 +636,7 @@ export function useInkwellSession() {
   };
 
   const handleNextScene = async () => {
-    if (sessionId == null || !session || useMockPreview) return;
+    if (sessionId == null || !session ) return;
     if (sceneNum !== session.currentScene) return;
     if (session.currentScene >= session.totalScenes || isGenerating || isAdvancePending) return;
 
@@ -681,7 +667,7 @@ export function useInkwellSession() {
   };
 
   const handleRetryPage = async () => {
-    if (sessionId == null || useMockPreview || currentScene?.sceneId == null) return;
+    if (sessionId == null  || currentScene?.sceneId == null) return;
     try {
       setError(null);
       setProcedurePending(true);
@@ -693,7 +679,7 @@ export function useInkwellSession() {
   };
 
   const handleRestoreGeneration = async (generationId: bigint) => {
-    if (sessionId == null || useMockPreview) return;
+    if (sessionId == null ) return;
     try {
       setError(null);
       await restoreGenerationReducer({ sessionId, generationId });
@@ -722,7 +708,7 @@ export function useInkwellSession() {
 
   const requestForkAtScene = useCallback(
     (targetSceneNum: number, generationId?: bigint, branchLabel?: string) => {
-      if (sessionId == null || useMockPreview) return;
+      if (sessionId == null ) return;
       if (session?.generatingScene !== 0) {
         setError('Wait for generation to finish before forking');
         return;
@@ -733,7 +719,7 @@ export function useInkwellSession() {
         branchLabel,
       });
     },
-    [sessionId, useMockPreview, session?.generatingScene]
+    [sessionId, session?.generatingScene]
   );
 
   const cancelFork = useCallback(() => {
@@ -741,7 +727,7 @@ export function useInkwellSession() {
   }, []);
 
   const confirmFork = useCallback(async () => {
-    if (sessionId == null || useMockPreview || forkConfirm == null) return;
+    if (sessionId == null  || forkConfirm == null) return;
     try {
       setError(null);
       setProcedurePending(true);
@@ -765,14 +751,13 @@ export function useInkwellSession() {
     }
   }, [
     sessionId,
-    useMockPreview,
     forkConfirm,
     forkStoryAtSceneReducer,
   ]);
 
   useEffect(() => {
     const pending = pendingForkRef.current;
-    if (!pending || useMockPreview) return;
+    if (!pending ) return;
 
     const newBranch = storyBranches
       .filter(b => {
@@ -799,7 +784,7 @@ export function useInkwellSession() {
     setSceneNum(pending.sceneNum);
     setScreen('scene');
     setProcedurePending(false);
-  }, [storyBranches, useMockPreview, resetGenerationClientState]);
+  }, [storyBranches, resetGenerationClientState]);
 
   useEffect(() => {
     if (!procedurePending || pendingForkRef.current == null) return;
@@ -820,7 +805,6 @@ export function useInkwellSession() {
     (targetSceneNum: number) => {
       if (
         sessionId == null ||
-        useMockPreview ||
         procedurePending ||
         session == null
       ) {
@@ -833,7 +817,7 @@ export function useInkwellSession() {
       const canonical = pickCanonicalScene(scenes, targetSceneNum);
       return canonical?.status === 'done';
     },
-    [sessionId, useMockPreview, procedurePending, session, scenes]
+    [sessionId, procedurePending, session, scenes]
   );
 
   const sessionScenes = useMemo(() => {
@@ -862,14 +846,6 @@ export function useInkwellSession() {
     [session?.currentScene]
   );
 
-  const handlePreviewScene = () => {
-    if (import.meta.env.PROD) return;
-    setUseMockPreview(true);
-    setSessionId(1n);
-    setSceneNum(1);
-    setScreen('scene');
-    setError(null);
-  };
 
   const handleOpenStoryLibrary = useCallback(() => {
     setScreen('story-library');
@@ -889,7 +865,6 @@ export function useInkwellSession() {
           : Math.min(row.currentScene, Math.max(row.totalScenes, 1));
 
       setSessionId(targetSessionId);
-      setUseMockPreview(false);
       followLiveRef.current = !('isComplete' in row) || !row.isComplete;
       prevLiveSceneRef.current = null;
       setSceneNum(resumeScene);
@@ -912,7 +887,6 @@ export function useInkwellSession() {
           : Math.min(row.currentScene, Math.max(row.totalScenes, 1));
 
       setSessionId(targetSessionId);
-      setUseMockPreview(false);
       followLiveRef.current = !('isComplete' in row) || !row.isComplete;
       setSceneNum(resumeScene);
       setScreen('session');
@@ -935,7 +909,6 @@ export function useInkwellSession() {
     isGenerating,
     isAdvancePending,
     isJoining,
-    useMockPreview,
     error,
     session,
     characters,
@@ -973,7 +946,6 @@ export function useInkwellSession() {
     storyBranches,
     rootSessionId,
     handleJoinSession,
-    handlePreviewScene,
     handleOpenStoryLibrary,
     handleResumeStory,
     handleBrowseStoryScenes,

@@ -16,7 +16,6 @@ function App() {
     isGenerating,
     isAdvancePending,
     isJoining,
-    useMockPreview,
     error,
     session,
     characters,
@@ -54,7 +53,6 @@ function App() {
     storyBranches,
     sessionScenes,
     handleJoinSession,
-    handlePreviewScene,
     handleOpenStoryLibrary,
     handleResumeStory,
     handleBrowseStoryScenes,
@@ -64,7 +62,6 @@ function App() {
   const isLiveScene =
     session?.currentScene == null || sceneNum === session?.currentScene;
   const coDirectHint =
-    !useMockPreview &&
     otherDirectorsOnline &&
     !isGenerating &&
     isLiveScene;
@@ -117,7 +114,6 @@ function App() {
             onContinueStory={savedSession ? handleContinueStory : undefined}
             savedSession={savedSession}
             onGoHome={handleGoHome}
-            onPreviewScene={handlePreviewScene}
             isSubmitting={isSubmitting}
             error={error}
           />
@@ -148,8 +144,8 @@ function App() {
             onConfirmFork={() => void confirmFork()}
             onCancelFork={cancelFork}
             isGenerating={isGenerating}
-            directorsOnline={useMockPreview ? [] : directorsOnline}
-            sessionRole={useMockPreview ? null : sessionRole}
+            directorsOnline={directorsOnline}
+            sessionRole={sessionRole}
             error={error}
           />
         </div>
@@ -162,10 +158,10 @@ function App() {
           <SceneScreen
             sessionId={sessionId}
             sceneNum={sceneNum}
-            sessionCurrentScene={useMockPreview ? undefined : session?.currentScene}
+            sessionCurrentScene={session?.currentScene}
             title={currentScene?.title}
             sceneSummary={currentScene?.sceneSummary}
-            panels={useMockPreview ? undefined : panels}
+            panels={panels}
             genre={session?.genre}
             setting={session?.setting}
             totalScenes={session?.totalScenes}
@@ -183,7 +179,6 @@ function App() {
             onOpenAllScenes={() => setScreen('session')}
             isGenerating={isGenerating}
             isAdvancePending={isAdvancePending}
-            useMockData={useMockPreview}
             shareUrl={shareUrl}
             onRetryPage={handleRetryPage}
             nudgeActorName={nudgeActorName}

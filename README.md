@@ -6,7 +6,7 @@
 
 Inkwell is an AI-native collaborative comic engine built natively on [SpacetimeDB](https://spacetimedb.com). You act as a director: define a genre, setting, and cast, then watch each scene become a full comic page in real time as rows commit over WebSocket subscriptions. Co-directors join via invite link, nudge the story together, fork alternate timelines, browse generation history, and follow every pipeline step in a live SpacetimeDB activity trail.
 
-**Live demo:** [https://inkwell.vercel.app](https://inkwell.vercel.app)  
+**Live demo:** [https://inkwell-opal.vercel.app](https://inkwell-opal.vercel.app)  
 **Repository:** [https://github.com/nayanikar/inkwell](https://github.com/nayanikar/inkwell)
 
 ---
@@ -260,8 +260,7 @@ npm run dev
 |--------|-------------|
 | `npm run build` | TypeScript + Vite production build |
 | `npm run preview` | Preview production build locally |
-| `npm run test` | Vitest unit tests |
-| `npm run publish:maincloud` | Publish module to SpacetimeDB Maincloud |
+| `npm run publish:maincloud` | Publish module to SpacetimeDB Maincloud (`inkwell-live`) |
 | `npm run dev:publish:fresh` | Publish locally with clean database |
 
 ---
@@ -275,7 +274,7 @@ spacetime login          # GitHub account linked to Maincloud
 npm run publish:maincloud
 ```
 
-This injects API keys from `spacetimedb/.env`, compiles the module, and publishes to `maincloud` as database `inkwell`.
+This injects API keys from `spacetimedb/.env`, compiles the module, and publishes to Maincloud as database **`inkwell-live`**.
 
 ### 2. Configure the production client
 
@@ -283,7 +282,7 @@ This injects API keys from `spacetimedb/.env`, compiles the module, and publishe
 
 ```bash
 VITE_SPACETIMEDB_HOST=wss://maincloud.spacetimedb.com
-VITE_SPACETIMEDB_DB_NAME=inkwell
+VITE_SPACETIMEDB_DB_NAME=inkwell-live
 ```
 
 ### 3. Build and deploy frontend to Vercel
@@ -329,8 +328,7 @@ inkwell/
 │   └── module_bindings/      # Generated SpacetimeDB client (do not edit)
 ├── scripts/inject-env.mjs    # Bakes API keys at publish time
 ├── spacetime.json            # Module config
-├── vercel.json               # Vercel deployment config
-└── ARCHITECTURE.md           # Extended architecture notes
+└── vercel.json               # Vercel deployment config
 ```
 
 ---
@@ -339,7 +337,7 @@ inkwell/
 
 | File | Purpose |
 |------|---------|
-| `spacetime.json` | Database `inkwell`, module path, server URL, bindings output |
+| `spacetime.json` | Database `inkwell-live` on Maincloud, module path, server URL, bindings output |
 | `spacetimedb/.env` | `ANTHROPIC_API_KEY`, `OPENAI_API_KEY` (module publish) |
 | `.env.local` | Local client WebSocket (`ws://localhost:3001`) |
 | `.env.production` | Production client WebSocket (`wss://maincloud.spacetimedb.com`) |
