@@ -145,7 +145,7 @@ The scheduled `panel_retry_queue` table invokes `retry_panel_image` on a timer. 
 | Feature | How it works |
 |---------|--------------|
 | **Live comic generation** | Claude writes scripts; OpenAI draws pages; panels stream via subscriptions |
-| **Co-direct** | Share invite link; multiple directors nudge and advance together |
+| **Co-direct** | Share invite link (`?session=` + `?code=`); friend can paste the full link or enter session ID + code on the landing page |
 | **Voice nudge** | Speak a directive; mapped to genre presets or custom queue |
 | **Preset nudges** | Twist, mood shift, raise stakes, spotlight conflict |
 | **Generation history** | Preview and restore prior scene versions |
@@ -314,7 +314,7 @@ Set the same `VITE_*` variables in the Vercel project dashboard. The live URL is
 2. **Setup** — Pick genre (e.g. horror), 4 scenes, setting, 2 characters with secrets.
 3. **Scene 1** — Watch panels and page image appear via subscriptions; narration auto-plays when TTS finishes; expand the **SpacetimeDB trail** (Reducer / Procedure / Transaction badges).
 4. **Direct** — Apply a preset nudge (“Introduce a twist”) → **Next scene →** → Scene 2 reflects the directive.
-5. **Co-direct** — Share invite link; open second browser tab; show directors online and realtime sync.
+5. **Co-direct** — Owner taps **Share** on a scene; friend opens the link or pastes it on the landing page under **Join a friend's story** (full link or session number + invite code). Invite codes are case-insensitive.
 6. **Voice** — Tap **Nudge**, speak a directive; show it queue or apply.
 7. **Generations** — Preview an older version in the sidebar; **Restore** or **Fork with this version**.
 8. **Fork** — Open a past act → **Fork from here** → confirm → land on the fork scene as the live timeline with fresh narration; nudge from there to grow a new branch.

@@ -29,6 +29,7 @@ import {
   type SavedSession,
 } from '../lib/savedSession';
 import { unlockNarrationAudio } from '../lib/audioUnlock';
+import { parseJoinCredentials } from '../lib/joinSession';
 
 export type InkwellScreen =
   | 'landing'
@@ -72,6 +73,12 @@ function friendlyProcedureError(err: unknown, fallback: string): string {
   }
   if (raw.includes('Invalid invite code')) {
     return 'Invalid invite code — ask the owner for a fresh link.';
+  }
+  if (raw.includes('Session not found')) {
+    return 'Session not found — check the session number or invite link.';
+  }
+  if (raw.includes('Story is complete')) {
+    return 'That story is already finished — you can browse it but not co-direct.';
   }
   return raw;
 }
@@ -509,26 +516,56 @@ export function useInkwellSession() {
   }, [accessibleSessions]);
 
   const handleJoinSession = useCallback(
-    async (id: bigint, inviteCode: string) => {
-      if (!connected ) return;
+    async (id: bigint, inviteCode: string): Promise<boolean> => {
+      if (!connected) {
+        setError(
+          'Not connected to SpacetimeDB — wait a moment and try again.'
+        );
+        return false;
+      }
       setIsJoining(true);
       setError(null);
       try {
         await joinSession({ sessionId: id, inviteCode });
         resetGenerationClientState();
         resumeAttemptRef.current = null;
+        unlockNarrationAudio();
+        const row = accessibleSessions.find(s => s.sessionId === id);
         setSessionId(id);
         followLiveRef.current = true;
         prevLiveSceneRef.current = null;
-        setSceneNum(1);
+        setSceneNum(row?.currentScene ?? 1);
         setScreen('scene');
+        if (row) {
+          saveSessionProgress({
+            sessionId: id.toString(),
+            sceneNum: row.currentScene,
+            genre: row.genre,
+            setting: row.setting,
+            role: 'co-director',
+          });
+        }
+        return true;
       } catch (err) {
         setError(friendlyProcedureError(err, 'Failed to join session'));
+        return false;
       } finally {
         setIsJoining(false);
       }
     },
-    [connected, joinSession]
+    [connected, joinSession, resetGenerationClientState, accessibleSessions]
+  );
+
+  const handleJoinFromForm = useCallback(
+    (sessionInput: string, codeInput: string) => {
+      const parsed = parseJoinCredentials(sessionInput, codeInput);
+      if ('error' in parsed) {
+        setError(parsed.error);
+        return;
+      }
+      void handleJoinSession(parsed.sessionId, parsed.inviteCode);
+    },
+    [handleJoinSession]
   );
 
   useEffect(() => {
@@ -538,7 +575,14 @@ export function useInkwellSession() {
     const codeParam = params.get('code');
     if (!sessionParam || !codeParam) return;
 
-    void handleJoinSession(BigInt(sessionParam), codeParam).then(() => {
+    const parsed = parseJoinCredentials(sessionParam, codeParam);
+    if ('error' in parsed) {
+      setError(parsed.error);
+      return;
+    }
+
+    void handleJoinSession(parsed.sessionId, parsed.inviteCode).then(success => {
+      if (!success) return;
       params.delete('session');
       params.delete('code');
       const next = params.toString();
@@ -1009,7 +1053,7 @@ export function useInkwellSession() {
     forkSettling,
     storyBranches,
     rootSessionId,
-    handleJoinSession,
+    handleJoinFromForm,
     handleOpenStoryLibrary,
     handleResumeStory,
     handleBrowseStoryScenes,

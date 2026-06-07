@@ -72,6 +72,10 @@ export function directorDisplayName(
   return presence?.display_name ?? sender.toHexString().slice(0, 8);
 }
 
+export function inviteCodesMatch(stored: string, submitted: string): boolean {
+  return stored.trim().toUpperCase() === submitted.trim().toUpperCase();
+}
+
 export function generateInviteCode(ctx: { random: Random }): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let code = '';

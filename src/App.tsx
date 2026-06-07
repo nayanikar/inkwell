@@ -53,7 +53,7 @@ function App() {
     forkConfirmPending,
     storyBranches,
     sessionScenes,
-    handleJoinSession,
+    handleJoinFromForm,
     handleOpenStoryLibrary,
     handleResumeStory,
     handleBrowseStoryScenes,
@@ -78,9 +78,7 @@ function App() {
               savedSession ? handleContinueStory : undefined
             }
             savedSession={savedSession}
-            onJoinSession={(id, code) =>
-              void handleJoinSession(BigInt(id), code)
-            }
+            onJoinSession={handleJoinFromForm}
             onOpenStoryLibrary={handleOpenStoryLibrary}
             isJoining={isJoining}
             error={error}
@@ -216,9 +214,7 @@ function App() {
           onStartNewStory={() => setScreen('setup')}
           onContinueStory={savedSession ? handleContinueStory : undefined}
           savedSession={savedSession}
-          onJoinSession={(id, code) =>
-            void handleJoinSession(BigInt(id), code)
-          }
+          onJoinSession={handleJoinFromForm}
           onOpenStoryLibrary={handleOpenStoryLibrary}
           isJoining={isJoining}
           error={error}

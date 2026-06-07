@@ -10,6 +10,7 @@ import {
   assertCurrentSceneComplete,
   directorDisplayName,
   findCoDirectorRow,
+  inviteCodesMatch,
   generateInviteCode,
   isSessionOwner,
   pickCanonicalScene,
@@ -575,7 +576,7 @@ export const join_session = spacetimedb.reducer(
       if (existing) {
         return;
       }
-      if (sessionRow.invite_code !== inviteCode.trim()) {
+      if (!inviteCodesMatch(sessionRow.invite_code, inviteCode)) {
         throw new SenderError('Invalid invite code');
       }
       ctx.db.coDirector.insert({
