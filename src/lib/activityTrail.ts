@@ -448,7 +448,7 @@ export function buildTrailEvents({
         id: 'narration-draw',
         kind: 'narration',
         label: 'generate_scene · OpenAI TTS',
-        detail: 'tts-1 · scene narration audio',
+        detail: 'gpt-4o-mini-tts · scene narration audio',
         active: true,
         done: false,
       })

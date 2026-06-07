@@ -100,6 +100,12 @@ function copyMemories(
   }
 }
 
+const EMPTY_NARRATION = {
+  narration_audio_url: '',
+  narration_segments_json: '',
+  narration_status: '',
+};
+
 function copySceneAndPanels(
   tx: AnyTx,
   oldScene: AnyTx,
@@ -112,9 +118,7 @@ function copySceneAndPanels(
     title: oldScene.title,
     scene_summary: oldScene.scene_summary ?? '',
     page_image_url: oldScene.page_image_url ?? '',
-    narration_audio_url: oldScene.narration_audio_url ?? '',
-    narration_segments_json: oldScene.narration_segments_json ?? '',
-    narration_status: oldScene.narration_status ?? '',
+    ...EMPTY_NARRATION,
     current_generation_id: 0n,
     status: 'done',
     created_at: oldScene.created_at,
@@ -170,9 +174,7 @@ function copySceneGenerations(
       title: gen.title,
       scene_summary: gen.scene_summary ?? '',
       page_image_url: gen.page_image_url ?? '',
-      narration_audio_url: gen.narration_audio_url ?? '',
-      narration_segments_json: gen.narration_segments_json ?? '',
-      narration_status: gen.narration_status ?? '',
+      ...EMPTY_NARRATION,
       panels_json: gen.panels_json ?? '[]',
       status: gen.status,
       is_current: gen.is_current,
@@ -214,9 +216,7 @@ function applyGenerationSnapshot(
     title: sourceGen.title,
     scene_summary: sourceGen.scene_summary ?? '',
     page_image_url: sourceGen.page_image_url ?? '',
-    narration_audio_url: sourceGen.narration_audio_url ?? '',
-    narration_segments_json: sourceGen.narration_segments_json ?? '',
-    narration_status: sourceGen.narration_status ?? '',
+    ...EMPTY_NARRATION,
     status: 'done',
   });
 
@@ -241,9 +241,7 @@ function applyGenerationSnapshot(
     title: sourceGen.title,
     scene_summary: sourceGen.scene_summary ?? '',
     page_image_url: sourceGen.page_image_url ?? '',
-    narration_audio_url: sourceGen.narration_audio_url ?? '',
-    narration_segments_json: sourceGen.narration_segments_json ?? '',
-    narration_status: sourceGen.narration_status ?? '',
+    ...EMPTY_NARRATION,
     panels_json: sourceGen.panels_json ?? '[]',
     status: 'done',
     is_current: true,

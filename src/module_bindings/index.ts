@@ -52,6 +52,7 @@ import UpdateCharacterMoodReducer from "./update_character_mood_reducer";
 // Import all procedure arg schemas
 import * as AdvanceAndGenerateProcedure from "./advance_and_generate_procedure";
 import * as GenerateSceneProcedure from "./generate_scene_procedure";
+import * as RegenerateSceneNarrationProcedure from "./regenerate_scene_narration_procedure";
 import * as ResumeGenerationProcedure from "./resume_generation_procedure";
 import * as RetryPageNowProcedure from "./retry_page_now_procedure";
 import * as StartStoryProcedure from "./start_story_procedure";
@@ -307,6 +308,7 @@ const reducersSchema = __reducers(
 const proceduresSchema = __procedures(
   __procedureSchema("advance_and_generate", AdvanceAndGenerateProcedure.params, AdvanceAndGenerateProcedure.returnType),
   __procedureSchema("generate_scene", GenerateSceneProcedure.params, GenerateSceneProcedure.returnType),
+  __procedureSchema("regenerate_scene_narration", RegenerateSceneNarrationProcedure.params, RegenerateSceneNarrationProcedure.returnType),
   __procedureSchema("resume_generation", ResumeGenerationProcedure.params, ResumeGenerationProcedure.returnType),
   __procedureSchema("retry_page_now", RetryPageNowProcedure.params, RetryPageNowProcedure.returnType),
   __procedureSchema("start_story", StartStoryProcedure.params, StartStoryProcedure.returnType),

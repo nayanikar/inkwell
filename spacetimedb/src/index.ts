@@ -12,6 +12,7 @@ import {
   findCoDirectorRow,
   generateInviteCode,
   isSessionOwner,
+  pickCanonicalScene,
 } from './lib/sessionGuards.js';
 import {
   assertSchedulerCaller,
@@ -1068,6 +1069,41 @@ export const resume_generation = spacetimedb.procedure(
     } else if (plan.action === 'page_retry') {
       runRetryPageImage(ctx, sessionId, plan.sceneId, plan.sceneNum);
     }
+
+    return {};
+  }
+);
+
+/** Regenerate TTS for a completed scene (e.g. after fork copies visuals without audio). */
+export const regenerate_scene_narration = spacetimedb.procedure(
+  { sessionId: t.u64(), sceneNum: t.u32() },
+  t.unit(),
+  (ctx, { sessionId, sceneNum }) => {
+    const sceneMeta = ctx.withTx(tx => {
+      assertSessionDirector(
+        tx.db.session.session_id.find(sessionId) ?? null,
+        ctx.sender,
+        tx.db
+      );
+      const scenes = [...tx.db.scene.session_id.filter(sessionId)];
+      const canonical = pickCanonicalScene(scenes, sceneNum);
+      if (!canonical) {
+        throw new SenderError(`Scene ${sceneNum} not found`);
+      }
+      if (canonical.status !== 'done') {
+        throw new SenderError(`Scene ${sceneNum} is not ready for narration`);
+      }
+      return { sceneId: canonical.scene_id, title: canonical.title ?? '' };
+    });
+
+    runSceneNarration(
+      ctx,
+      sessionId,
+      sceneMeta.sceneId,
+      sceneNum,
+      sceneMeta.title,
+      'regenerate_narration'
+    );
 
     return {};
   }

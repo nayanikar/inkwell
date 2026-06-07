@@ -129,7 +129,7 @@ export default function SceneScreen({
 
   useEffect(() => {
     setViewingGenerationId(null);
-  }, [sceneNum]);
+  }, [sceneNum, sessionId]);
 
   const trailSceneNum = sceneNum;
   const sceneDirectives = useSceneDirectives(
@@ -235,7 +235,12 @@ export default function SceneScreen({
     hasServerNarration ||
     (narrationStatus === 'error' && hasPanelNarration);
   const sceneReadyForNarration =
-    sceneReady && narrationUsable && !narrationBusy && !isPreviewingGeneration;
+    sceneReady &&
+    displayPanels.length > 0 &&
+    narrationUsable &&
+    !narrationBusy &&
+    !isPreviewingGeneration &&
+    !forkPending;
   const canRestoreGeneration =
     isLiveScene &&
     !anyGenerating &&
@@ -281,6 +286,10 @@ export default function SceneScreen({
     autoPlayRequestId: autoNarrateRequestId,
     canPlay: sceneReadyForNarration,
   });
+
+  useEffect(() => {
+    if (forkPending) stop();
+  }, [forkPending, stop]);
 
   const handleNarrationToggle = () => {
     if (isPlaying) {
@@ -404,20 +413,31 @@ export default function SceneScreen({
           }}
         />
 
-        <main className="min-h-0 flex-1 overflow-hidden border-x border-ink px-4 py-3 md:px-6">
+        <main className="relative min-h-0 flex-1 overflow-hidden border-x border-ink px-4 py-3 md:px-6">
           <ComicPage
             panels={displayPanels}
             sceneNum={sceneNum}
             title={displayTitle}
             summary={displaySummary ?? currentSceneRow?.sceneSummary ?? undefined}
-            activePanelNum={activePanelNum}
-            activeNarrationText={activeNarrationText}
-            isNarrating={isPlaying}
+            activePanelNum={forkPending ? null : activePanelNum}
+            activeNarrationText={forkPending ? null : activeNarrationText}
+            isNarrating={forkPending ? false : isPlaying}
             pageImageUrl={pageImageUrl}
             isPageGenerating={anyGenerating && !pageReady}
             onRetryPage={canRetryPage ? onRetryPage : undefined}
             retryDisabled={anyGenerating}
           />
+          {forkPending && (
+            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-paper/85 px-6 text-center backdrop-blur-[1px]">
+              <p className="font-label text-xs uppercase tracking-widest text-ink">
+                Creating fork timeline…
+              </p>
+              <p className="mt-2 max-w-sm font-dialogue text-sm text-ink/60">
+                Copying this scene into a new branch. Narration will start once
+                the new timeline is ready.
+              </p>
+            </div>
+          )}
         </main>
 
         <DirectSceneRail

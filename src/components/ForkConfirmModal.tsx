@@ -35,7 +35,8 @@ export default function ForkConfirmModal({
         <p className="mt-3 font-dialogue text-base leading-snug text-ink/80">
           Starts a new fork from Scene {sceneNum}
           {withGeneration ? ' using the selected version' : ''}. The original
-          timeline stays unchanged. Co-directors will move to the new fork.
+          timeline stays unchanged. Co-directors can switch to the new fork in
+          the branch menu.
         </p>
         {branchLabel?.trim() && (
           <p className="mt-2 font-label text-[10px] uppercase tracking-wide text-ink/50">

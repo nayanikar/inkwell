@@ -124,6 +124,7 @@ The scheduled `panel_retry_queue` table invokes `retry_panel_image` on a timer. 
 | `advance_and_generate` | Advance scene, apply nudges, generate next scene |
 | `generate_scene` | Generate or regenerate a specific scene |
 | `resume_generation` | Recover in-flight generation after reconnect |
+| `regenerate_scene_narration` | Regenerate TTS for a completed scene (used after fork) |
 | `retry_page_now` | Manual page image retry |
 | `retry_panel_image` | Scheduler-invoked panel retry handler |
 
@@ -147,7 +148,7 @@ The scheduled `panel_retry_queue` table invokes `retry_panel_image` on a timer. 
 | **Voice nudge** | Speak a directive; mapped to genre presets or custom queue |
 | **Preset nudges** | Twist, mood shift, raise stakes, spotlight conflict |
 | **Generation history** | Preview and restore prior scene versions |
-| **Story fork** | Branch from a past scene or generation snapshot; switch forks in sidebar |
+| **Story fork** | Branch from a past scene or generation snapshot; new timeline gets fresh TTS narration and becomes the active scene for nudging |
 | **Narration** | Server TTS with panel highlighting; auto-plays when Scene 1 finishes; Listen/Stop in scene header |
 | **Activity trail** | Live SpacetimeDB primitive badges as generation runs |
 | **Story library** | Resume any accessible story with branch counts and progress |
@@ -315,7 +316,7 @@ Set the same `VITE_*` variables in the Vercel project dashboard. The live URL is
 5. **Co-direct** — Share invite link; open second browser tab; show directors online and realtime sync.
 6. **Voice** — Tap **Nudge**, speak a directive; show it queue or apply.
 7. **Generations** — Preview an older version in the sidebar; **Restore** or **Fork with this version**.
-8. **Fork** — Open a past act → **Fork from here** → confirm → switch timelines in **Forks** sidebar.
+8. **Fork** — Open a past act → **Fork from here** → confirm → land on the fork scene as the live timeline with fresh narration; nudge from there to grow a new branch.
 9. **Library** — Home → **Your stories** → resume any story with branch counts.
 
 ---
@@ -362,6 +363,8 @@ SpacetimeDB modules read API keys from `env.generated.ts`, created by `scripts/i
 | Style | Audiobook narrator instructions (warm, natural pacing) |
 
 Narration is generated per panel beat inside `generate_scene`, stored as `narration_audio_url` and `narration_segments_json` on each scene row. The client auto-plays when server TTS finishes (including Scene 1 after setup), with Web Speech fallback if TTS fails.
+
+**Fork behavior:** Fork copies comic visuals but clears copied narration audio, then calls `regenerate_scene_narration` so the new timeline uses the current TTS model/voice. Auto-play waits until the fork scene’s page and panels are visible — no empty comic with voice-over.
 
 ---
 

@@ -84,6 +84,7 @@ export function useInkwellSession() {
   const advanceAndGenerate = useProcedure(procedures.advanceAndGenerate);
   const resumeGeneration = useProcedure(procedures.resumeGeneration);
   const retryPageNow = useProcedure(procedures.retryPageNow);
+  const regenerateSceneNarration = useProcedure(procedures.regenerateSceneNarration);
   const joinSession = useReducer(reducers.joinSession);
   const submitNudge = useReducer(reducers.submitNudge);
   const restoreGenerationReducer = useReducer(reducers.restoreGeneration);
@@ -110,6 +111,7 @@ export function useInkwellSession() {
   const [isJoining, setIsJoining] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [autoNarrateRequestId, setAutoNarrateRequestId] = useState(0);
+  const [forkSettling, setForkSettling] = useState(false);
 
   /** When true, auto-follow live scene on advance/complete; false after manual history browse. */
   const followLiveRef = useRef(true);
@@ -326,6 +328,7 @@ export function useInkwellSession() {
     if (sessionId == null  || !session || !liveScene) return;
     if (!followLiveRef.current) return;
     if (sceneNum !== session.currentScene) return;
+    if (forkSettling || procedurePending) return;
 
     const prevStatus = prevLiveSceneStatusRef.current;
     const nextStatus = liveScene.status;
@@ -349,6 +352,8 @@ export function useInkwellSession() {
     session,
     liveScene,
     bumpAutoNarrate,
+    forkSettling,
+    procedurePending,
   ]);
 
   // Auto-narrate when server TTS finishes (scene may already be `done` while narration generates).
@@ -356,6 +361,7 @@ export function useInkwellSession() {
     if (sessionId == null  || !session || !liveScene) return;
     if (!followLiveRef.current) return;
     if (sceneNum !== session.currentScene) return;
+    if (forkSettling || procedurePending) return;
 
     const sceneKey = `${sessionId}-${sceneNum}`;
     if (narrationSceneKeyRef.current !== sceneKey) {
@@ -383,7 +389,19 @@ export function useInkwellSession() {
     session,
     liveScene,
     bumpAutoNarrate,
+    forkSettling,
+    procedurePending,
   ]);
+
+  // Clear fork settling once the fork scene's comic data has synced.
+  useEffect(() => {
+    if (!forkSettling || sessionId == null || !liveScene) return;
+    const pageReady = !!liveScene.pageImageUrl?.trim();
+    const panelsReady = livePanels.length > 0;
+    if (pageReady && panelsReady) {
+      setForkSettling(false);
+    }
+  }, [forkSettling, sessionId, liveScene, liveScene?.pageImageUrl, livePanels.length]);
 
   useEffect(() => {
     if (optimisticGeneratingScene == null || !session) return;
@@ -779,6 +797,7 @@ export function useInkwellSession() {
     try {
       setError(null);
       setProcedurePending(true);
+      unlockNarrationAudio();
       pendingForkRef.current = {
         parentSessionId: sessionId,
         sceneNum: forkConfirm.sceneNum,
@@ -823,16 +842,29 @@ export function useInkwellSession() {
 
     if (!newBranch) return;
 
+    const forkSceneNum = pending.sceneNum;
+    const newSessionId = newBranch.sessionId;
     pendingForkRef.current = null;
     resetGenerationClientState();
     resumeAttemptRef.current = null;
-    setSessionId(newBranch.sessionId);
+    setForkSettling(true);
+    prevLiveSceneStatusRef.current = null;
+    prevNarrationReadyRef.current = false;
+    narrationSceneKeyRef.current = '';
+    setSessionId(newSessionId);
     followLiveRef.current = true;
     prevLiveSceneRef.current = null;
-    setSceneNum(pending.sceneNum);
+    setSceneNum(forkSceneNum);
     setScreen('scene');
     setProcedurePending(false);
-  }, [storyBranches, resetGenerationClientState]);
+
+    void regenerateSceneNarration({
+      sessionId: newSessionId,
+      sceneNum: forkSceneNum,
+    }).catch(err => {
+      console.error('Fork narration regen failed:', err);
+    });
+  }, [storyBranches, resetGenerationClientState, regenerateSceneNarration]);
 
   useEffect(() => {
     if (!procedurePending || pendingForkRef.current == null) return;
@@ -991,7 +1023,8 @@ export function useInkwellSession() {
     cancelFork,
     forkConfirm,
     canForkAtScene,
-    forkPending: procedurePending,
+    forkPending: procedurePending || forkSettling,
+    forkSettling,
     storyBranches,
     rootSessionId,
     handleJoinSession,

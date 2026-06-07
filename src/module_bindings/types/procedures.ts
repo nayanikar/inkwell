@@ -8,6 +8,7 @@ import { type Infer as __Infer } from "spacetimedb";
 // Import all procedure arg schemas
 import * as AdvanceAndGenerateProcedure from "../advance_and_generate_procedure";
 import * as GenerateSceneProcedure from "../generate_scene_procedure";
+import * as RegenerateSceneNarrationProcedure from "../regenerate_scene_narration_procedure";
 import * as ResumeGenerationProcedure from "../resume_generation_procedure";
 import * as RetryPageNowProcedure from "../retry_page_now_procedure";
 import * as StartStoryProcedure from "../start_story_procedure";
@@ -16,6 +17,8 @@ export type AdvanceAndGenerateArgs = __Infer<typeof AdvanceAndGenerateProcedure.
 export type AdvanceAndGenerateResult = __Infer<typeof AdvanceAndGenerateProcedure.returnType>;
 export type GenerateSceneArgs = __Infer<typeof GenerateSceneProcedure.params>;
 export type GenerateSceneResult = __Infer<typeof GenerateSceneProcedure.returnType>;
+export type RegenerateSceneNarrationArgs = __Infer<typeof RegenerateSceneNarrationProcedure.params>;
+export type RegenerateSceneNarrationResult = __Infer<typeof RegenerateSceneNarrationProcedure.returnType>;
 export type ResumeGenerationArgs = __Infer<typeof ResumeGenerationProcedure.params>;
 export type ResumeGenerationResult = __Infer<typeof ResumeGenerationProcedure.returnType>;
 export type RetryPageNowArgs = __Infer<typeof RetryPageNowProcedure.params>;
