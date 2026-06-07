@@ -316,7 +316,6 @@ export function useInkwellSession() {
 
     setSceneNum(session.currentScene);
     setOptimisticGeneratingScene(null);
-    bumpAutoNarrate();
   }, [
     liveScene?.status,
     liveScene?.pageImageUrl,
@@ -325,40 +324,6 @@ export function useInkwellSession() {
     sessionId,
     session,
     liveScene,
-    bumpAutoNarrate,
-  ]);
-
-  // Auto-narrate when live scene finishes without a scene switch (e.g. Scene 1 on start).
-  useEffect(() => {
-    if (sessionId == null  || !session || !liveScene) return;
-    if (!followLiveRef.current) return;
-    if (sceneNum !== session.currentScene) return;
-    if (forkSettling || forkWaitingForBranch) return;
-
-    const prevStatus = prevLiveSceneStatusRef.current;
-    const nextStatus = liveScene.status;
-    prevLiveSceneStatusRef.current = nextStatus;
-
-    const pageReady =
-      nextStatus === 'done' && !!liveScene.pageImageUrl?.trim();
-    const becameDone =
-      (prevStatus === 'generating' && nextStatus === 'done') ||
-      (prevStatus === null && pageReady);
-
-    if (becameDone) {
-      bumpAutoNarrate();
-    }
-  }, [
-    liveScene?.status,
-    liveScene?.pageImageUrl,
-    sceneNum,
-    session?.currentScene,
-    sessionId,
-    session,
-    liveScene,
-    bumpAutoNarrate,
-    forkSettling,
-    forkWaitingForBranch,
   ]);
 
   // Auto-narrate when server TTS finishes (scene may already be `done` while narration generates).
@@ -377,8 +342,7 @@ export function useInkwellSession() {
     const narrationStatus = liveScene.narrationStatus ?? '';
     const hasServerAudio = !!liveScene.narrationAudioUrl?.trim();
     const narrationReady =
-      (narrationStatus === 'done' && hasServerAudio) ||
-      narrationStatus === 'error';
+      narrationStatus === 'done' && hasServerAudio;
     const wasReady = prevNarrationReadyRef.current;
     prevNarrationReadyRef.current = narrationReady;
 

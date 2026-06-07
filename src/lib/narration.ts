@@ -212,14 +212,22 @@ function playSegmentSequence(
   };
 
   audio.addEventListener('ended', advance);
+
+  let failed = false;
+  const failSegment = (err: unknown) => {
+    if (failed || token !== segmentPlaybackToken) return;
+    failed = true;
+    segmentPlaybackToken++;
+    if (activeAudio === audio) activeAudio = null;
+    onError?.(err);
+  };
+
   audio.addEventListener('error', () => {
-    onError?.(new Error('Segment audio playback failed'));
-    advance();
+    failSegment(new Error('Segment audio playback failed'));
   });
 
   void audio.play().catch(err => {
-    onError?.(err);
-    advance();
+    failSegment(err);
   });
 }
 
@@ -257,6 +265,14 @@ export function playSceneNarration({
     onSegment?.(findActiveSegment(segments, ratio));
   };
 
+  let failed = false;
+  const failPlayback = (err: unknown) => {
+    if (failed) return;
+    failed = true;
+    if (activeAudio === audio) activeAudio = null;
+    onError?.(err);
+  };
+
   audio.addEventListener('timeupdate', handleTimeUpdate);
   audio.addEventListener('ended', () => {
     onSegment?.(null);
@@ -264,12 +280,11 @@ export function playSceneNarration({
     if (activeAudio === audio) activeAudio = null;
   });
   audio.addEventListener('error', () => {
-    onError?.(new Error('Audio playback failed'));
-    if (activeAudio === audio) activeAudio = null;
+    failPlayback(new Error('Audio playback failed'));
   });
 
   void audio.play().catch(err => {
-    onError?.(err);
+    failPlayback(err);
   });
 
   if (segments.length > 0) {

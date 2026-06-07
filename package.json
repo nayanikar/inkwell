@@ -11,6 +11,8 @@
     "dev:publish:fresh": "node scripts/inject-env.mjs && spacetime publish inkwell -y --delete-data --server http://127.0.0.1:3001 --module-path spacetimedb && spacetime generate --lang typescript --out-dir src/module_bindings --module-path spacetimedb",
     "publish:maincloud": "node scripts/inject-env.mjs && spacetime publish inkwell-live -y --server maincloud --module-path spacetimedb && spacetime generate --lang typescript --out-dir src/module_bindings --module-path spacetimedb",
     "build": "tsc -b && vite build",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "preview": "vite preview",
     "spacetime:generate": "spacetime generate --lang typescript --out-dir src/module_bindings --module-path spacetimedb",
     "spacetime:publish:local": "spacetime publish --module-path spacetimedb --server local"
@@ -27,6 +29,7 @@
     "@vitejs/plugin-react": "^5.0.2",
     "tailwindcss": "^4.1.8",
     "typescript": "~5.6.2",
-    "vite": "^7.1.5"
+    "vite": "^7.1.5",
+    "vitest": "^3.2.4"
   }
 }

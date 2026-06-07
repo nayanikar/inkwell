@@ -39,12 +39,16 @@ export function useSceneNarration({
   const stopRef = useRef(false);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   const lastAutoPlayRef = useRef('');
+  const fallbackStartedRef = useRef(false);
 
   const parsedSegments = parseNarrationSegments(segmentsJson);
   const trimmedAudioUrl = audioUrl?.trim() || '';
+  const hasServerTts =
+    !!trimmedAudioUrl || parsedSegments.some(s => s.audioUrl?.trim());
 
   const cleanup = useCallback(() => {
     stopRef.current = true;
+    fallbackStartedRef.current = false;
     stopSceneNarration();
     utteranceRef.current = null;
     setIsPlaying(false);
@@ -55,13 +59,24 @@ export function useSceneNarration({
   useEffect(() => {
     cleanup();
     stopRef.current = false;
+    lastAutoPlayRef.current = '';
   }, [sceneKey, cleanup]);
 
+  useEffect(() => {
+    if (canPlay || !isPlaying) return;
+    cleanup();
+    stopRef.current = false;
+  }, [canPlay, isPlaying, cleanup]);
+
   const playWebSpeechFallback = useCallback(() => {
+    if (hasServerTts) return;
+
     const segments = buildNarrationSegments(panels, characters);
     if (segments.length === 0) return;
 
+    stopSceneNarration();
     stopRef.current = false;
+    fallbackStartedRef.current = true;
     setIsPlaying(true);
 
     const playSegment = (index: number) => {
@@ -86,7 +101,7 @@ export function useSceneNarration({
     };
 
     playSegment(0);
-  }, [panels, characters]);
+  }, [panels, characters, hasServerTts]);
 
   const play = useCallback(() => {
     if (muted || !canPlay) return;
@@ -94,7 +109,7 @@ export function useSceneNarration({
     cleanup();
     stopRef.current = false;
 
-    if (trimmedAudioUrl || parsedSegments.some(s => s.audioUrl?.trim())) {
+    if (hasServerTts) {
       setIsPlaying(true);
       playSceneNarration({
         audioUrl: trimmedAudioUrl,
@@ -111,8 +126,9 @@ export function useSceneNarration({
           setActiveNarrationText(null);
         },
         onError: () => {
-          if (stopRef.current) return;
-          playWebSpeechFallback();
+          if (stopRef.current || fallbackStartedRef.current) return;
+          cleanup();
+          stopRef.current = false;
         },
       });
       return;
@@ -125,6 +141,7 @@ export function useSceneNarration({
     cleanup,
     trimmedAudioUrl,
     parsedSegments,
+    hasServerTts,
     playWebSpeechFallback,
   ]);
 

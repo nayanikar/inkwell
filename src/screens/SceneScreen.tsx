@@ -236,6 +236,11 @@ export default function SceneScreen({
   const narrationUsable =
     hasServerNarration ||
     (narrationStatus === 'error' && hasPanelNarration);
+  const narrationControlsVisible =
+    sceneReady &&
+    displayPanels.length > 0 &&
+    !isPreviewingGeneration &&
+    !forkPending;
   const sceneReadyForNarration =
     sceneReady &&
     displayPanels.length > 0 &&
@@ -333,15 +338,34 @@ export default function SceneScreen({
                 onToggle={voiceNudge.toggleListening}
               />
             )}
-            {sceneReadyForNarration && (
-              <button
-                type="button"
-                onClick={handleNarrationToggle}
-                className={`scene-header-btn ${isPlaying ? 'scene-header-btn--active' : ''}`}
-                title={isPlaying ? 'Stop narration' : 'Listen to scene'}
-              >
-                {isPlaying ? 'Stop' : 'Listen'}
-              </button>
+            {narrationControlsVisible && (
+              <>
+                <button
+                  type="button"
+                  onClick={toggleMute}
+                  className={`scene-header-btn ${muted ? 'scene-header-btn--active' : ''}`}
+                  title={muted ? 'Unmute narration' : 'Mute narration'}
+                >
+                  {muted ? 'Unmute' : 'Mute'}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleNarrationToggle}
+                  disabled={!sceneReadyForNarration}
+                  className={`scene-header-btn ${isPlaying ? 'scene-header-btn--active' : ''} disabled:cursor-not-allowed disabled:opacity-50`}
+                  title={
+                    !sceneReadyForNarration
+                      ? narrationBusy
+                        ? 'Narration is being prepared…'
+                        : 'Narration not ready yet'
+                      : isPlaying
+                        ? 'Stop narration'
+                        : 'Listen to scene'
+                  }
+                >
+                  {isPlaying ? 'Stop' : 'Listen'}
+                </button>
+              </>
             )}
             {shareUrl && (
               <ShareSessionButton

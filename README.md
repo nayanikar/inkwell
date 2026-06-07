@@ -149,7 +149,7 @@ The scheduled `panel_retry_queue` table invokes `retry_panel_image` on a timer. 
 | **Preset nudges** | Twist, mood shift, raise stakes, spotlight conflict |
 | **Generation history** | Preview and restore prior scene versions |
 | **Story fork** | Branch from a past scene or generation snapshot; new timeline gets fresh TTS narration and becomes the active scene for nudging |
-| **Narration** | Server TTS with panel highlighting; auto-plays when Scene 1 finishes; Listen/Stop in scene header |
+| **Narration** | Server TTS with panel highlighting; auto-plays when TTS finishes; Mute/Unmute and Listen/Stop in scene header |
 | **Activity trail** | Live SpacetimeDB primitive badges as generation runs |
 | **Story library** | Resume any accessible story with branch counts and progress |
 | **Session overview** | Grid of all scenes with fork entry points |
@@ -362,7 +362,9 @@ SpacetimeDB modules read API keys from `env.generated.ts`, created by `scripts/i
 | Voice | `marin` |
 | Style | Audiobook narrator instructions (warm, natural pacing) |
 
-Narration is generated per panel beat inside `generate_scene`, stored as `narration_audio_url` and `narration_segments_json` on each scene row. The client auto-plays when server TTS finishes (including Scene 1 after setup), with Web Speech fallback if TTS fails.
+Narration is generated per panel beat inside `generate_scene`, stored as `narration_audio_url` and `narration_segments_json` on each scene row. The client auto-plays when server TTS finishes (including Scene 1 after setup). Web Speech is used only when server TTS is unavailable — never alongside server audio, so warm TTS and robotic fallback cannot overlap.
+
+Scene header controls: **Mute/Unmute** (persists in local storage) and **Listen/Stop** (disabled while TTS is generating). Run unit tests with `npm test`.
 
 **Fork behavior:** Fork copies comic visuals but clears copied narration audio, then calls `regenerate_scene_narration` so the new timeline uses the current TTS model/voice. Auto-play waits until the fork scene’s page and panels are visible. The “Creating fork timeline…” overlay only appears during an actual fork — not during voice nudge or next-scene advance.
 
