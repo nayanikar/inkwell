@@ -77,6 +77,7 @@ type SceneScreenProps = {
   onConfirmFork?: () => void;
   onCancelFork?: () => void;
   forkPending?: boolean;
+  forkConfirmPending?: boolean;
   error?: string | null;
 };
 
@@ -121,6 +122,7 @@ export default function SceneScreen({
   onConfirmFork,
   onCancelFork,
   forkPending = false,
+  forkConfirmPending = false,
   error = null,
 }: SceneScreenProps) {
   const [viewingGenerationId, setViewingGenerationId] = useState<bigint | null>(
@@ -469,7 +471,7 @@ export default function SceneScreen({
         sceneNum={forkConfirm?.sceneNum ?? sceneNum}
         branchLabel={forkConfirm?.branchLabel ?? branchLabel}
         withGeneration={forkConfirm?.generationId != null}
-        pending={forkPending}
+        pending={forkConfirmPending}
         onConfirm={() => onConfirmFork?.()}
         onCancel={() => onCancelFork?.()}
       />

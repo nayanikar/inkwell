@@ -50,6 +50,7 @@ function App() {
     forkConfirm,
     canForkAtScene,
     forkPending,
+    forkConfirmPending,
     storyBranches,
     sessionScenes,
     handleJoinSession,
@@ -140,6 +141,7 @@ function App() {
             onRequestFork={requestForkAtScene}
             canForkAtScene={canForkAtScene}
             forkPending={forkPending}
+            forkConfirmPending={forkConfirmPending}
             forkConfirm={forkConfirm}
             onConfirmFork={() => void confirmFork()}
             onCancelFork={cancelFork}
@@ -200,6 +202,7 @@ function App() {
             onConfirmFork={() => void confirmFork()}
             onCancelFork={cancelFork}
             forkPending={forkPending}
+            forkConfirmPending={forkConfirmPending}
             error={error}
           />
         </div>

@@ -364,7 +364,7 @@ SpacetimeDB modules read API keys from `env.generated.ts`, created by `scripts/i
 
 Narration is generated per panel beat inside `generate_scene`, stored as `narration_audio_url` and `narration_segments_json` on each scene row. The client auto-plays when server TTS finishes (including Scene 1 after setup), with Web Speech fallback if TTS fails.
 
-**Fork behavior:** Fork copies comic visuals but clears copied narration audio, then calls `regenerate_scene_narration` so the new timeline uses the current TTS model/voice. Auto-play waits until the fork scene’s page and panels are visible — no empty comic with voice-over.
+**Fork behavior:** Fork copies comic visuals but clears copied narration audio, then calls `regenerate_scene_narration` so the new timeline uses the current TTS model/voice. Auto-play waits until the fork scene’s page and panels are visible. The “Creating fork timeline…” overlay only appears during an actual fork — not during voice nudge or next-scene advance.
 
 ---
 

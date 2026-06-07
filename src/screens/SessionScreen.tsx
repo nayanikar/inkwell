@@ -21,6 +21,7 @@ type SessionScreenProps = {
   onRequestFork?: (sceneNum: number) => void;
   canForkAtScene?: (sceneNum: number) => boolean;
   forkPending?: boolean;
+  forkConfirmPending?: boolean;
   forkConfirm?: { sceneNum: number; generationId?: bigint; branchLabel?: string } | null;
   onConfirmFork?: () => void;
   onCancelFork?: () => void;
@@ -43,6 +44,7 @@ export default function SessionScreen({
   onRequestFork,
   canForkAtScene,
   forkPending = false,
+  forkConfirmPending = false,
   forkConfirm = null,
   onConfirmFork,
   onCancelFork,
@@ -141,7 +143,7 @@ export default function SessionScreen({
         sceneNum={forkConfirm?.sceneNum ?? 1}
         branchLabel={forkConfirm?.branchLabel}
         withGeneration={forkConfirm?.generationId != null}
-        pending={forkPending}
+        pending={forkConfirmPending}
         onConfirm={() => onConfirmFork?.()}
         onCancel={() => onCancelFork?.()}
       />
