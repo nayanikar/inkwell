@@ -159,6 +159,10 @@ const tablesSchema = __schema({
       { accessor: 'directive_id', name: 'narrative_directive_directive_id_idx_btree', algorithm: 'btree', columns: [
         'directiveId',
       ] },
+      { accessor: 'session_scene', name: 'narrative_directive_session_id_applied_at_scene_idx_btree', algorithm: 'btree', columns: [
+        'sessionId',
+        'appliedAtScene',
+      ] },
       { accessor: 'session_id', name: 'narrative_directive_session_id_idx_btree', algorithm: 'btree', columns: [
         'sessionId',
       ] },
@@ -193,6 +197,10 @@ const tablesSchema = __schema({
       { accessor: 'session_id', name: 'panel_session_id_idx_btree', algorithm: 'btree', columns: [
         'sessionId',
       ] },
+      { accessor: 'session_scene', name: 'panel_session_id_scene_num_idx_btree', algorithm: 'btree', columns: [
+        'sessionId',
+        'sceneNum',
+      ] },
     ],
     constraints: [
       { name: 'panel_panel_id_key', constraint: 'unique', columns: ['panelId'] },
@@ -218,6 +226,10 @@ const tablesSchema = __schema({
       { accessor: 'session_id', name: 'scene_session_id_idx_btree', algorithm: 'btree', columns: [
         'sessionId',
       ] },
+      { accessor: 'session_scene', name: 'scene_session_id_scene_num_idx_btree', algorithm: 'btree', columns: [
+        'sessionId',
+        'sceneNum',
+      ] },
     ],
     constraints: [
       { name: 'scene_scene_id_key', constraint: 'unique', columns: ['sceneId'] },
@@ -231,6 +243,10 @@ const tablesSchema = __schema({
       ] },
       { accessor: 'session_id', name: 'scene_generation_session_id_idx_btree', algorithm: 'btree', columns: [
         'sessionId',
+      ] },
+      { accessor: 'session_scene', name: 'scene_generation_session_id_scene_num_idx_btree', algorithm: 'btree', columns: [
+        'sessionId',
+        'sceneNum',
       ] },
     ],
     constraints: [

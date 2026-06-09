@@ -32,6 +32,21 @@ function timestampMicros(tx: AnyTx): bigint {
   return tx.timestamp.microsSinceUnixEpoch;
 }
 
+function canonicalScenesByNum(scenes: AnyTx[]): Map<number, AnyTx> {
+  const byNum = new Map<number, AnyTx[]>();
+  for (const scene of scenes) {
+    const list = byNum.get(scene.scene_num) ?? [];
+    list.push(scene);
+    byNum.set(scene.scene_num, list);
+  }
+
+  const result = new Map<number, AnyTx>();
+  for (const [sceneNum, candidates] of byNum) {
+    result.set(sceneNum, pickCanonicalScene(candidates, sceneNum)!);
+  }
+  return result;
+}
+
 export function validateForkPreconditions(
   tx: AnyTx,
   sessionId: bigint,
@@ -316,10 +331,11 @@ export function copySessionFork(
   copyMemories(tx, sessionId, newSessionId, charMap, sceneNum);
 
   const parentScenes = [...tx.db.scene.session_id.filter(sessionId)];
+  const canonicalByNum = canonicalScenesByNum(parentScenes);
   const sceneIdByNum = new Map<number, bigint>();
 
   for (let s = 1; s <= sceneNum; s++) {
-    const canonical = pickCanonicalScene(parentScenes, s);
+    const canonical = canonicalByNum.get(s);
     if (!canonical) {
       throw new SenderError(`Missing scene ${s} for fork`);
     }

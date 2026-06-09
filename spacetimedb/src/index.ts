@@ -157,7 +157,17 @@ const memory = table(
 );
 
 const narrativeDirective = table(
-  { name: 'narrative_directive', public: true },
+  {
+    name: 'narrative_directive',
+    public: true,
+    indexes: [
+      {
+        accessor: 'session_scene',
+        algorithm: 'btree',
+        columns: ['session_id', 'applied_at_scene'] as const,
+      },
+    ],
+  },
   {
     directive_id: t.u64().primaryKey().autoInc(),
     session_id: t.u64().index('btree'),
@@ -169,7 +179,17 @@ const narrativeDirective = table(
 );
 
 const scene = table(
-  { name: 'scene', public: true },
+  {
+    name: 'scene',
+    public: true,
+    indexes: [
+      {
+        accessor: 'session_scene',
+        algorithm: 'btree',
+        columns: ['session_id', 'scene_num'] as const,
+      },
+    ],
+  },
   {
     scene_id: t.u64().primaryKey().autoInc(),
     session_id: t.u64().index('btree'),
@@ -187,7 +207,17 @@ const scene = table(
 );
 
 const panel = table(
-  { name: 'panel', public: true },
+  {
+    name: 'panel',
+    public: true,
+    indexes: [
+      {
+        accessor: 'session_scene',
+        algorithm: 'btree',
+        columns: ['session_id', 'scene_num'] as const,
+      },
+    ],
+  },
   {
     panel_id: t.u64().primaryKey().autoInc(),
     scene_id: t.u64().index('btree'),
@@ -223,7 +253,17 @@ const activityEvent = table(
 
 /** Immutable archive of scene generations — supports preview and restore. */
 const sceneGeneration = table(
-  { name: 'scene_generation', public: true },
+  {
+    name: 'scene_generation',
+    public: true,
+    indexes: [
+      {
+        accessor: 'session_scene',
+        algorithm: 'btree',
+        columns: ['session_id', 'scene_num'] as const,
+      },
+    ],
+  },
   {
     generation_id: t.u64().primaryKey().autoInc(),
     session_id: t.u64().index('btree'),

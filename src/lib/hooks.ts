@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useTable, useSpacetimeDB } from 'spacetimedb/react';
 import { tables } from '../module_bindings';
+import { sessionIdForFilter } from './subscribe';
 import type { PanelProps } from '../components/Panel';
 import type { CharacterData } from './types';
 import {
@@ -11,11 +12,8 @@ import {
 } from './storyActs';
 
 export function useSession(sessionId: bigint | null) {
-  const [sessions] = useTable(
-    sessionId != null
-      ? tables.session.where(r => r.sessionId.eq(sessionId))
-      : tables.session
-  );
+  const sid = sessionIdForFilter(sessionId);
+  const [sessions] = useTable(tables.session.where(r => r.sessionId.eq(sid)));
   return useMemo(
     () =>
       sessionId != null
@@ -146,16 +144,10 @@ export function useAccessibleSessions() {
 }
 
 export function useCoDirectors(sessionId: bigint | null) {
-  const [rows] = useTable(
-    sessionId != null
-      ? tables.coDirector.where(r => r.sessionId.eq(sessionId))
-      : tables.coDirector
-  );
+  const sid = sessionIdForFilter(sessionId);
+  const [rows] = useTable(tables.coDirector.where(r => r.sessionId.eq(sid)));
   return useMemo(
-    () =>
-      sessionId != null
-        ? rows.filter(r => r.sessionId === sessionId)
-        : [],
+    () => (sessionId != null ? rows : []),
     [rows, sessionId]
   );
 }
@@ -224,11 +216,8 @@ export function useSessionRole(
 }
 
 export function useCharacters(sessionId: bigint | null): CharacterData[] {
-  const [characters] = useTable(
-    sessionId != null
-      ? tables.character.where(r => r.sessionId.eq(sessionId))
-      : tables.character
-  );
+  const sid = sessionIdForFilter(sessionId);
+  const [characters] = useTable(tables.character.where(r => r.sessionId.eq(sid)));
   return useMemo(
     () =>
       characters.map(c => ({
@@ -251,11 +240,8 @@ export type MemoryEntry = {
 };
 
 export function useMemories(sessionId: bigint | null): MemoryEntry[] {
-  const [memories] = useTable(
-    sessionId != null
-      ? tables.memory.where(r => r.sessionId.eq(sessionId))
-      : tables.memory
-  );
+  const sid = sessionIdForFilter(sessionId);
+  const [memories] = useTable(tables.memory.where(r => r.sessionId.eq(sid)));
   return useMemo(
     () =>
       [...memories]
@@ -294,11 +280,8 @@ export function useActivityEvents(
   sceneNum: number,
   generationId?: bigint | null
 ): ActivityEventRow[] {
-  const [events] = useTable(
-    sessionId != null
-      ? tables.activityEvent.where(r => r.sessionId.eq(sessionId))
-      : tables.activityEvent
-  );
+  const sid = sessionIdForFilter(sessionId);
+  const [events] = useTable(tables.activityEvent.where(r => r.sessionId.eq(sid)));
   return useMemo(
     () =>
       events
@@ -325,11 +308,8 @@ export function useActivityEvents(
 }
 
 export function useScenes(sessionId: bigint | null) {
-  const [scenes] = useTable(
-    sessionId != null
-      ? tables.scene.where(r => r.sessionId.eq(sessionId))
-      : tables.scene
-  );
+  const sid = sessionIdForFilter(sessionId);
+  const [scenes] = useTable(tables.scene.where(r => r.sessionId.eq(sid)));
   return useMemo(
     () => [...scenes].sort((a, b) => a.sceneNum - b.sceneNum || Number(a.sceneId - b.sceneId)),
     [scenes]
@@ -389,19 +369,16 @@ export function useScenePanels(
   sceneNum: number
 ): PanelProps[] {
   const canonical = useCanonicalScene(sessionId, sceneNum);
+  const sid = sessionIdForFilter(sessionId);
   const [panels] = useTable(
-    sessionId != null
-      ? tables.panel.where(r => r.sessionId.eq(sessionId))
-      : tables.panel
+    tables.panel.where(r =>
+      r.sessionId.eq(sid).and(r.sceneNum.eq(sceneNum))
+    )
   );
   return useMemo(
     () =>
       panels
-        .filter(
-          p =>
-            p.sceneNum === sceneNum &&
-            (canonical == null || p.sceneId === canonical.sceneId)
-        )
+        .filter(p => canonical == null || p.sceneId === canonical.sceneId)
         .sort((a, b) => a.panelNum - b.panelNum)
         .map(p => ({
           panelId: p.panelId,
@@ -430,16 +407,17 @@ export function useSceneDirectives(
   sessionId: bigint | null,
   sceneNum: number
 ): SceneDirective[] {
+  const sid = sessionIdForFilter(sessionId);
   const [directives] = useTable(
-    sessionId != null
-      ? tables.narrativeDirective.where(r => r.sessionId.eq(sessionId))
-      : tables.narrativeDirective
+    tables.narrativeDirective.where(r =>
+      r.sessionId.eq(sid).and(r.appliedAtScene.eq(sceneNum))
+    )
   );
   return useMemo(
     () =>
-      directives
-        .filter(d => d.appliedAtScene === sceneNum)
-        .map(d => ({
+      sessionId == null
+        ? []
+        : directives.map(d => ({
           directiveId: d.directiveId,
           type: d.type,
           content: d.content,
@@ -461,17 +439,19 @@ export function useSceneGenerations(
   sessionId: bigint | null,
   sceneNum: number
 ): GenerationRow[] {
+  const sid = sessionIdForFilter(sessionId);
   const [rows] = useTable(
-    sessionId != null
-      ? tables.sceneGeneration.where(r => r.sessionId.eq(sessionId))
-      : tables.sceneGeneration
+    tables.sceneGeneration.where(r =>
+      r.sessionId.eq(sid).and(r.sceneNum.eq(sceneNum))
+    )
   );
   return useMemo(
     () =>
-      rows
-        .filter(r => r.sessionId === sessionId && r.sceneNum === sceneNum)
-        .sort((a, b) => b.generationNum - a.generationNum)
-        .map(r => ({
+      sessionId == null
+        ? []
+        : [...rows]
+            .sort((a, b) => b.generationNum - a.generationNum)
+            .map(r => ({
           generationId: r.generationId,
           sessionId: r.sessionId,
           sceneNum: r.sceneNum,
@@ -509,11 +489,8 @@ export function useCurrentGeneration(
 export function useGenerationCounts(
   sessionId: bigint | null
 ): Map<number, number> {
-  const [rows] = useTable(
-    sessionId != null
-      ? tables.sceneGeneration.where(r => r.sessionId.eq(sessionId))
-      : tables.sceneGeneration
-  );
+  const sid = sessionIdForFilter(sessionId);
+  const [rows] = useTable(tables.sceneGeneration.where(r => r.sessionId.eq(sid)));
   return useMemo(() => {
     const counts = new Map<number, number>();
     if (sessionId == null) return counts;
@@ -537,11 +514,8 @@ export type PendingNudgeRow = {
 
 export function usePendingNudge(sessionId: bigint | null): PendingNudgeRow | null {
   const { identity } = useSpacetimeDB();
-  const [rows] = useTable(
-    sessionId != null
-      ? tables.pendingNudge.where(r => r.sessionId.eq(sessionId))
-      : tables.pendingNudge
-  );
+  const sid = sessionIdForFilter(sessionId);
+  const [rows] = useTable(tables.pendingNudge.where(r => r.sessionId.eq(sid)));
   return useMemo(() => {
     if (sessionId == null) return null;
     const row = rows.find(r => r.sessionId === sessionId);
@@ -574,11 +548,8 @@ export type NudgeEventRow = {
 };
 
 export function useNudgeEvents(sessionId: bigint | null): NudgeEventRow[] {
-  const [events] = useTable(
-    sessionId != null
-      ? tables.nudgeEvent.where(r => r.sessionId.eq(sessionId))
-      : tables.nudgeEvent
-  );
+  const sid = sessionIdForFilter(sessionId);
+  const [events] = useTable(tables.nudgeEvent.where(r => r.sessionId.eq(sid)));
   return useMemo(
     () =>
       sessionId == null
