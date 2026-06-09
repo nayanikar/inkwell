@@ -1,6 +1,10 @@
 import type { SceneJson } from './types.js';
 import { logActivity } from './activityLog.js';
-import { buildVisualContextJson } from './sceneVisualContext.js';
+import {
+  buildVisualContextJson,
+  parseVisualContextJson,
+} from './sceneVisualContext.js';
+import { resolveWardrobeMap } from './characterVisual.js';
 import { releaseGenerationLock } from './nudgeCoordination.js';
 import {
   archiveSceneBeforeOverwrite,
@@ -90,6 +94,20 @@ export function maybeFinalizeScene(
       tx.db.character.char_id.update({
         ...row,
         current_mood: update.new_mood,
+      });
+    }
+  }
+
+  const visualContext = parseVisualContextJson(pending.visual_context_json);
+  if (visualContext?.scene_wardrobe?.length) {
+    const characters = [...tx.db.character.session_id.filter(sessionId)];
+    const wardrobeMap = resolveWardrobeMap(characters, visualContext.scene_wardrobe);
+    for (const character of characters) {
+      const outfit = wardrobeMap.get(character.name.trim());
+      if (!outfit) continue;
+      tx.db.character.char_id.update({
+        ...character,
+        current_outfit: outfit,
       });
     }
   }

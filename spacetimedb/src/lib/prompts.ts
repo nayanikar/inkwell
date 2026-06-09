@@ -6,11 +6,14 @@ import {
   type CharacterForVoice,
 } from './storyQuality.js';
 import {
+  HUMAN_DEFAULT_RULE,
   VISUAL_CONSISTENCY_RULES,
   buildCharacterVisualCards,
   buildCharacterAnchorBlock,
   buildSceneWardrobeBlock,
   resolveCharactersInPanel,
+  resolveWardrobeMap,
+  sanitizePanelImagePrompt,
   type CharacterVisualInput,
 } from './characterVisual.js';
 
@@ -87,6 +90,17 @@ Setting: ${session.setting}
 
 ${buildCharacterVoiceCards(characters)}
 
+${HUMAN_DEFAULT_RULE}
+
+${
+  scene_num > 1
+    ? `CROSS-SCENE VISUAL CONTINUITY (scene ${scene_num}):
+Characters must look identical to every prior scene — same human face, hair, body type, and locked outfit unless scene_wardrobe specifies a change.
+image_prompt must NEVER describe new appearances, clothing, hair, or body changes.`
+    : `SCENE 1 VISUAL LOCK:
+Establish each character's canonical human appearance. This design will be locked for all future scenes via reference images.`
+}
+
 ${buildCharacterVisualCards(characters)}
 
 ${VISUAL_CONSISTENCY_RULES}
@@ -122,7 +136,7 @@ Respond ONLY with valid JSON. No markdown. No preamble. Exactly this schema:
       "caption": "First person narrator voice. Observational. Or empty string.",
       "speaker": "Character name or empty string",
       "dialogue": "What they say. Or empty string. Two lines max.",
-      "image_prompt": "Pose, expression, action, environment, camera angle ONLY — never redesign species or face.",
+      "image_prompt": "Pose, expression, action, environment, camera angle ONLY — human characters; never describe animal features or redesign face/body type.",
       "layout_hint": "wide | tall | square | close-up",
       "characters_present": ["Exact character names visible in this panel"]
     }
@@ -141,7 +155,14 @@ Write 5-7 panels. Vary layout_hint across panels. Each panel is ONE complete com
 
 export function parseSceneJson(text: string): SceneJson {
   const cleaned = text.trim().replace(/^```json\s*/i, '').replace(/```\s*$/, '');
-  return JSON.parse(cleaned) as SceneJson;
+  const sceneJson = JSON.parse(cleaned) as SceneJson;
+  return {
+    ...sceneJson,
+    panels: (sceneJson.panels ?? []).map(panel => ({
+      ...panel,
+      image_prompt: sanitizePanelImagePrompt(panel.image_prompt ?? ''),
+    })),
+  };
 }
 
 type PanelPromptInput = {
@@ -166,6 +187,7 @@ type PageImagePromptInput = {
   sceneWardrobe?: { char_id: number; outfit: string }[];
   hasReferenceImages?: boolean;
   hasPreviousPage?: boolean;
+  referencedCharacters?: CharacterVisualInput[];
 };
 
 const PAGE_PROMPT_FOOTER =
@@ -179,19 +201,29 @@ function buildCharacterAnchorBlockForPage(
   characters: CharacterVisualInput[],
   sceneWardrobe?: { char_id: number; outfit: string }[]
 ): string {
-  const wardrobeMap = new Map<string, string>();
-  if (sceneWardrobe?.length) {
-    const byId = new Map(
-      characters.map(c => [Number(c.char_id ?? 0n), c.name.trim()])
+  return buildCharacterAnchorBlock(
+    characters,
+    resolveWardrobeMap(characters, sceneWardrobe)
+  );
+}
+
+function buildReferenceOrderNote(
+  referencedCharacters: CharacterVisualInput[],
+  hasPreviousPage: boolean
+): string {
+  const lines: string[] = [];
+  referencedCharacters.forEach((character, index) => {
+    lines.push(
+      `Image ${index + 1} = ${character.name.trim()} character model sheet (match face, hair, body, outfit exactly)`
     );
-    for (const w of sceneWardrobe) {
-      const name = byId.get(w.char_id);
-      if (name && w.outfit?.trim()) {
-        wardrobeMap.set(name, w.outfit.trim());
-      }
-    }
+  });
+  if (hasPreviousPage) {
+    lines.push(
+      `Image ${referencedCharacters.length + 1} = previous scene comic page (style lock — match all character faces and ink style exactly)`
+    );
   }
-  return buildCharacterAnchorBlock(characters, wardrobeMap);
+  if (lines.length === 0) return '';
+  return `REFERENCE IMAGE ORDER: ${lines.join('; ')}.`;
 }
 
 function formatPanelLine(
@@ -199,7 +231,9 @@ function formatPanelLine(
   cast: CharacterVisualInput[]
 ): string {
   const num = panel.panel_num;
-  const prompt = panel.image_prompt?.trim() || 'Visual scene';
+  const prompt = sanitizePanelImagePrompt(
+    panel.image_prompt?.trim() || 'Visual scene'
+  );
   const present = resolveCharactersInPanel(panel, cast);
   const castNote =
     present.length > 0
@@ -238,21 +272,30 @@ export function buildPageImagePrompt({
   sceneWardrobe,
   hasReferenceImages,
   hasPreviousPage,
+  referencedCharacters,
 }: PageImagePromptInput): string {
   const sortedPanels = [...panels].sort((a, b) => a.panel_num - b.panel_num);
   const refNotes: string[] = [];
+  const refOrder = buildReferenceOrderNote(
+    referencedCharacters ?? [],
+    hasPreviousPage ?? false
+  );
+  if (refOrder) {
+    refNotes.push(refOrder);
+  }
   if (hasReferenceImages) {
     refNotes.push(
-      'REFERENCE IMAGES: First image(s) are character model sheets — match species, face, ears/horns, proportions, and default outfit exactly.'
+      'REFERENCE IMAGES: Character model sheets define the canonical face, hair, and body for each cast member. Match them exactly in every panel.'
     );
   }
   if (hasPreviousPage) {
     refNotes.push(
-      'STYLE LOCK: Final reference image is the previous comic page — match character designs and ink style; only change poses and layout for this scene.'
+      'STYLE LOCK: The final reference image is the previous comic page — preserve every character face and ink style from that page; only change poses, layout, and scene action.'
     );
   }
 
   const parts = [
+    HUMAN_DEFAULT_RULE,
     session.style_bible,
     `SCENE CONTEXT: ${session.genre} story, ${session.setting}, scene ${sceneNum}.`,
     buildCharacterAnchorBlockForPage(characters, sceneWardrobe),

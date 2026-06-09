@@ -61,6 +61,7 @@ function copyCharacters(
       personality: c.personality,
       current_mood: c.current_mood,
       visual_description: c.visual_description ?? '',
+      current_outfit: c.current_outfit ?? '',
       reference_image_url: c.reference_image_url ?? '',
     });
     charMap.set(c.char_id.toString(), newChar.char_id);

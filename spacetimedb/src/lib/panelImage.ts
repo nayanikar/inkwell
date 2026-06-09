@@ -1,5 +1,8 @@
 import { buildPageImagePrompt } from './prompts.js';
-import { callOpenAIWithReferences } from './openai.js';
+import {
+  callOpenAIWithReferences,
+  type ReferenceImageGenerationResult,
+} from './openai.js';
 import type { CharacterVisualInput } from './characterVisual.js';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -28,6 +31,7 @@ type PanelRow = {
 export type PageImageOptions = {
   sceneWardrobe?: { char_id: number; outfit: string }[];
   referenceImageUrls?: string[];
+  referencedCharacters?: CharacterRow[];
   hasPreviousPage?: boolean;
 };
 
@@ -38,7 +42,7 @@ export function generatePageImage(
   characters: CharacterRow[],
   panels: PanelRow[],
   options: PageImageOptions = {}
-): string {
+): ReferenceImageGenerationResult {
   const refs = options.referenceImageUrls ?? [];
 
   const fullPrompt = buildPageImagePrompt({
@@ -53,6 +57,7 @@ export function generatePageImage(
     sceneWardrobe: options.sceneWardrobe,
     hasReferenceImages: refs.length > 0,
     hasPreviousPage: options.hasPreviousPage ?? false,
+    referencedCharacters: options.referencedCharacters ?? [],
   });
 
   return callOpenAIWithReferences(ctx, fullPrompt, refs);

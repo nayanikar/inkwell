@@ -63,6 +63,25 @@ function buildVisualContextFromSceneJson(sceneJson: SceneJson): SceneVisualConte
   };
 }
 
+function collectSceneCharacterNames(
+  panels: { speaker?: string; characters_present?: string[] }[],
+  cast: { name: string }[]
+): string[] {
+  const names = new Set<string>();
+  for (const panel of panels) {
+    for (const name of panel.characters_present ?? []) {
+      const trimmed = name.trim();
+      if (trimmed) names.add(trimmed);
+    }
+    const speaker = panel.speaker?.trim();
+    if (speaker) names.add(speaker);
+  }
+  if (names.size === 0) {
+    return cast.map(c => c.name.trim());
+  }
+  return [...names];
+}
+
 function loadPageImageInputs(
   tx: AnyCtx,
   sessionId: bigint,
@@ -85,16 +104,26 @@ function loadPageImageInputs(
     visualContext = parseVisualContextJson(pending?.visual_context_json);
   }
 
+  const mergedPanels = mergePanelCast(panels, visualContext);
   const previousPageUrl = findPreviousScenePageUrl(tx, sessionId, sceneNum);
-  const referenceImageUrls = collectReferenceImages(characters, previousPageUrl);
+  const priorityNames = collectSceneCharacterNames(mergedPanels, characters);
+  const referenceCollection = collectReferenceImages(
+    characters,
+    previousPageUrl,
+    {
+      reservePreviousPage: sceneNum > 1,
+      priorityNames,
+    }
+  );
 
   return {
     session: sessionRow,
     characters,
-    panels: mergePanelCast(panels, visualContext),
+    panels: mergedPanels,
     sceneWardrobe: visualContext?.scene_wardrobe,
-    referenceImageUrls,
-    hasPreviousPage: !!previousPageUrl,
+    referenceImageUrls: referenceCollection.urls,
+    referencedCharacters: referenceCollection.referencedCharacters,
+    hasPreviousPage: referenceCollection.previousPageIncluded,
   };
 }
 
@@ -160,7 +189,7 @@ function runPageImageGeneration(
       ctx,
       ctxData.referenceImageUrls
     );
-    const pageImageUrl = generatePageImage(
+    const pageResult = generatePageImage(
       ctx,
       ctxData.session,
       sceneNum,
@@ -169,16 +198,29 @@ function runPageImageGeneration(
       {
         sceneWardrobe: ctxData.sceneWardrobe,
         referenceImageUrls,
+        referencedCharacters: ctxData.referencedCharacters,
         hasPreviousPage: ctxData.hasPreviousPage,
       }
     );
 
     ctx.withTx((tx: AnyCtx) => {
+      if (referenceImageUrls.length > 0 && !pageResult.usedReferenceEdits) {
+        logActivity(
+          tx,
+          sessionId,
+          sceneNum,
+          'page_image_fallback',
+          'Reference images unavailable — text-only page draw',
+          `Requested ${pageResult.requestedRefs} ref(s), applied ${pageResult.appliedRefs}`,
+          { done: true }
+        );
+      }
+
       const sceneRow = tx.db.scene.scene_id.find(sceneId);
       if (sceneRow) {
         tx.db.scene.scene_id.update({
           ...sceneRow,
-          page_image_url: pageImageUrl,
+          page_image_url: pageResult.imageUrl,
         });
       }
       for (const panel of panelRowsForScene(tx, sceneId)) {
@@ -494,7 +536,7 @@ export function runRetryPageImage(
       ctx,
       ctxData.referenceImageUrls
     );
-    const pageImageUrl = generatePageImage(
+    const pageResult = generatePageImage(
       ctx,
       ctxData.session,
       sceneNum,
@@ -503,16 +545,29 @@ export function runRetryPageImage(
       {
         sceneWardrobe: ctxData.sceneWardrobe,
         referenceImageUrls,
+        referencedCharacters: ctxData.referencedCharacters,
         hasPreviousPage: ctxData.hasPreviousPage,
       }
     );
 
     ctx.withTx((tx: AnyCtx) => {
+      if (referenceImageUrls.length > 0 && !pageResult.usedReferenceEdits) {
+        logActivity(
+          tx,
+          sessionId,
+          sceneNum,
+          'page_image_fallback',
+          'Reference images unavailable — text-only page draw',
+          `Requested ${pageResult.requestedRefs} ref(s), applied ${pageResult.appliedRefs}`,
+          { done: true }
+        );
+      }
+
       const sceneRow = tx.db.scene.scene_id.find(sceneId);
       if (sceneRow) {
         tx.db.scene.scene_id.update({
           ...sceneRow,
-          page_image_url: pageImageUrl,
+          page_image_url: pageResult.imageUrl,
         });
       }
       for (const panel of panelRowsForScene(tx, sceneId)) {

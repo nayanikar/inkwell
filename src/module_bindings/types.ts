@@ -36,6 +36,7 @@ export const Character = __t.object("Character", {
   currentMood: __t.string(),
   visualDescription: __t.string(),
   referenceImageUrl: __t.string(),
+  currentOutfit: __t.string(),
 });
 export type Character = __Infer<typeof Character>;
 

@@ -184,15 +184,27 @@ export function callOpenAI(ctx: HttpCtx, fullPrompt: string): string {
   return parseImageResponse(ctx, response);
 }
 
+export type ReferenceImageGenerationResult = {
+  imageUrl: string;
+  usedReferenceEdits: boolean;
+  requestedRefs: number;
+  appliedRefs: number;
+};
+
 /** Generate a page using character reference sheets and optional prior scene page. */
 export function callOpenAIWithReferences(
   ctx: HttpCtx,
   fullPrompt: string,
   referenceImageUrls: string[]
-): string {
+): ReferenceImageGenerationResult {
   const refs = referenceImageUrls.map(u => u.trim()).filter(Boolean);
   if (refs.length === 0) {
-    return callOpenAI(ctx, fullPrompt);
+    return {
+      imageUrl: callOpenAI(ctx, fullPrompt),
+      usedReferenceEdits: false,
+      requestedRefs: 0,
+      appliedRefs: 0,
+    };
   }
 
   const apiKey = OPENAI_API_KEY;
@@ -217,7 +229,12 @@ export function callOpenAIWithReferences(
     console.error(
       'No usable reference images — falling back to text-only generation'
     );
-    return callOpenAI(ctx, fullPrompt);
+    return {
+      imageUrl: callOpenAI(ctx, fullPrompt),
+      usedReferenceEdits: false,
+      requestedRefs: refs.length,
+      appliedRefs: 0,
+    };
   }
 
   const { body, boundary } = buildMultipartBody(
@@ -246,10 +263,20 @@ export function callOpenAIWithReferences(
       `OpenAI edits API failed (${response.status}), falling back to generations:`,
       response.text().slice(0, 200)
     );
-    return callOpenAI(ctx, fullPrompt);
+    return {
+      imageUrl: callOpenAI(ctx, fullPrompt),
+      usedReferenceEdits: false,
+      requestedRefs: refs.length,
+      appliedRefs: 0,
+    };
   }
 
-  return parseImageResponse(ctx, response);
+  return {
+    imageUrl: parseImageResponse(ctx, response),
+    usedReferenceEdits: true,
+    requestedRefs: refs.length,
+    appliedRefs: files.length,
+  };
 }
 
 /** Normalize legacy https refs to data URLs when possible. */

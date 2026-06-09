@@ -119,6 +119,7 @@ const character = table(
     current_mood: t.string(),
     visual_description: t.string().default(''),
     reference_image_url: t.string().default(''),
+    current_outfit: t.string().default(''),
   }
 );
 
@@ -414,7 +415,10 @@ function insertSessionWithCharacters(
       archetype: c.archetype.trim(),
       personality: c.personality.trim(),
       current_mood: c.current_mood?.trim() || 'neutral',
-      visual_description: c.visual_description?.trim() ?? '',
+      visual_description:
+        c.visual_description?.trim() ||
+        `Human adult, ink cartoon style, dressed fitting their role as ${c.archetype.trim() || 'story character'}`,
+      current_outfit: '',
     });
     tx.db.characterSecret.insert({
       char_id: charRow.char_id,

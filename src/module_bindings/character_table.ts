@@ -19,4 +19,5 @@ export default __t.row({
   currentMood: __t.string().name("current_mood"),
   visualDescription: __t.string().name("visual_description"),
   referenceImageUrl: __t.string().name("reference_image_url"),
+  currentOutfit: __t.string().name("current_outfit"),
 });
