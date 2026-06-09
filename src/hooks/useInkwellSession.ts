@@ -128,6 +128,8 @@ export function useInkwellSession() {
   const prevNarrationReadyRef = useRef(false);
   const narrationSceneKeyRef = useRef('');
   const resumeAttemptRef = useRef<string | null>(null);
+  /** Prevents URL auto-join from re-firing when accessibleSessions updates mid-join. */
+  const urlJoinAttemptRef = useRef<string | null>(null);
   const pendingForkRef = useRef<{
     parentSessionId: bigint;
     sceneNum: number;
@@ -160,6 +162,8 @@ export function useInkwellSession() {
     rootSessionId
   );
   const accessibleSessions = useAccessibleSessions();
+  const accessibleSessionsRef = useRef(accessibleSessions);
+  accessibleSessionsRef.current = accessibleSessions;
   const storyLibraryRows = useStoryLibrary();
   const storyLibrary = useMemo(
     () => storyLibraryRows.map(mapStoryLibraryRow),
@@ -530,7 +534,7 @@ export function useInkwellSession() {
         resetGenerationClientState();
         resumeAttemptRef.current = null;
         unlockNarrationAudio();
-        const row = accessibleSessions.find(s => s.sessionId === id);
+        const row = accessibleSessionsRef.current.find(s => s.sessionId === id);
         setSessionId(id);
         followLiveRef.current = true;
         prevLiveSceneRef.current = null;
@@ -553,8 +557,11 @@ export function useInkwellSession() {
         setIsJoining(false);
       }
     },
-    [connected, joinSession, resetGenerationClientState, accessibleSessions]
+    [connected, joinSession, resetGenerationClientState]
   );
+
+  const handleJoinSessionRef = useRef(handleJoinSession);
+  handleJoinSessionRef.current = handleJoinSession;
 
   const handleJoinFromForm = useCallback(
     (sessionInput: string, codeInput: string) => {
@@ -581,8 +588,18 @@ export function useInkwellSession() {
       return;
     }
 
-    void handleJoinSession(parsed.sessionId, parsed.inviteCode).then(success => {
-      if (!success) return;
+    const attemptKey = `${parsed.sessionId}:${parsed.inviteCode}`;
+    if (urlJoinAttemptRef.current === attemptKey) return;
+    urlJoinAttemptRef.current = attemptKey;
+
+    void handleJoinSessionRef.current(
+      parsed.sessionId,
+      parsed.inviteCode
+    ).then(success => {
+      if (!success) {
+        urlJoinAttemptRef.current = null;
+        return;
+      }
       params.delete('session');
       params.delete('code');
       const next = params.toString();
@@ -592,7 +609,7 @@ export function useInkwellSession() {
         next ? `?${next}` : window.location.pathname
       );
     });
-  }, [connected, handleJoinSession]);
+  }, [connected]);
 
   const handleGoHome = () => {
     if (sessionId != null && session) {
